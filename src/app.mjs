@@ -1,7 +1,8 @@
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { PRODUCT_ID } from './config.mjs';
 import { PaymentError } from './providers.mjs';
+import { diagnoseProviders } from './diagnostics.mjs';
 
 const json = (res, status, data) => {
   res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
@@ -24,7 +25,9 @@ function parse(raw) {
 
 export function createApp({ config, store, providers, log = console }) {
   const rates = new Map(), locks = new Map();
-  const methods = () => ({card:providers.stripe.configured,applepay:providers.stripe.configured,paypal:providers.paypal.configured,play:providers.play.configured});
+  // Apple Pay, Google Pay y Link los presenta Checkout de Stripe sobre el método card:
+  // se anuncian disponibles cuando Stripe está configurado y el dispositivo los admite.
+  const methods = () => ({card:providers.stripe.configured,applepay:providers.stripe.configured,googlepay:providers.stripe.configured,link:providers.stripe.configured,paypal:providers.paypal.configured,play:providers.play.configured});
   function rate(key, limit) {
     const now=Date.now(), window=Math.floor(now/60_000);
     const record=rates.get(key);
@@ -82,6 +85,15 @@ export function createApp({ config, store, providers, log = console }) {
       rate(`ip:${req.socket.remoteAddress}`,120);
       if(req.method==='GET' && url.pathname==='/health') return json(res,200,{ok:true});
       if(req.method==='GET' && url.pathname==='/api/config') return json(res,200,{productId:PRODUCT_ID,currency:'USD',amount:200,interval:'week',mode:config.mode,methods:methods()});
+      // Diagnóstico de proveedores: solo existe si DIAGNOSTICS_TOKEN está definido en el servidor.
+      // Nunca devuelve claves; indica la variable, el permiso o el precio que falla.
+      if(req.method==='GET' && url.pathname==='/api/diagnostics') {
+        if(!config.diagnosticsToken) throw new PaymentError('Ruta no encontrada.',404);
+        const given=Buffer.from(String(req.headers.authorization||'')), expected=Buffer.from(`Bearer ${config.diagnosticsToken}`);
+        if(given.length!==expected.length || !timingSafeEqual(given,expected)) throw new PaymentError('No autorizado.',401);
+        rate(`diagnostics:${req.socket.remoteAddress}`,4);
+        return json(res,200,await diagnoseProviders({config,providers}));
+      }
       if(req.method==='GET' && ['/return/success','/return/cancel'].includes(url.pathname)) {
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'",'Cache-Control':'no-store'});
         return res.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Velario</title><body style="font:18px system-ui;padding:3rem;max-width:38rem;margin:auto"><h1>Vuelve a Velario</h1><p>La app verificará el estado de tu suscripción al restaurar las compras. Puedes cerrar esta ventana.</p></body></html>');
@@ -102,7 +114,7 @@ export function createApp({ config, store, providers, log = console }) {
       }
       if(req.method==='GET' && url.pathname==='/api/entitlement') return json(res,200,await locked(account,()=>entitlement(account)));
       if(req.method==='POST' && url.pathname==='/api/checkout') {
-        const input=parse(await body(req)), providerName=input.method==='paypal'?'paypal':['card','applepay'].includes(input.method)?'stripe':null;
+        const input=parse(await body(req)), providerName=input.method==='paypal'?'paypal':['card','applepay','googlepay','link'].includes(input.method)?'stripe':null;
         if(!providerName) throw new PaymentError('Método no compatible.',400);
         rate(`checkout:${account}`,8);
         return json(res,200,await locked(account,async()=>{
@@ -136,7 +148,7 @@ export function createApp({ config, store, providers, log = console }) {
       throw new PaymentError('Ruta no encontrada.',404);
     } catch(error) {
       const status=error instanceof PaymentError || Number.isInteger(error.status) ? error.status : 500;
-      if(status>=500) log.error?.({requestId,status},'Payment request unavailable');
+      if(status>=500) log.error?.({requestId,status,providerStatus:error.providerStatus,providerDetail:error.providerDetail},'Payment request unavailable');
       json(res,status,{error:status===500?'No se pudo completar la operación.':error.message,requestId});
     }
   });

@@ -24,7 +24,7 @@ Copiar `.env.example` a `.env` y rellenar únicamente en el servidor. Usar HTTPS
 | Estado de configuración | `GET /api/config` | Producto, precio, modo y métodos configurados |
 | Sesión de instalación | `POST /api/session` | `accountId`, `token` aleatorio de 256 bits |
 | Consultar/restaurar Pro | `GET /api/entitlement` | `active`, `productId`, `expiresAt`, `status`, `verifiedAt`, `methods` |
-| Checkout en proveedor | `POST /api/checkout`, `{method: card\|applepay\|paypal}` | URL HTTPS del proveedor |
+| Checkout en proveedor | `POST /api/checkout`, `{method: card\|applepay\|googlepay\|link\|paypal}` | URL HTTPS del proveedor |
 | Verificar recibo Play | `POST /api/play/verify`, `{purchaseToken}` | Estado Pro verificado |
 | Comprobar Play antes de comprar | `GET /api/play/ready` | `ready:true`, producto y base plan tras consulta Google |
 | Gestionar/cancelar | `POST /api/manage` | URL del portal de suscripción |
@@ -55,9 +55,19 @@ Tarjetas de débito/crédito y Apple Pay se procesan con Checkout de Stripe. **A
 - Las sesiones actuales son **por instalación**. El token nativo permite restaurar en la misma instalación. La recuperación tras pérdida del dispositivo/reinstalación y la compra multiplataforma con una cuenta única requieren un flujo de identidad y recuperación de cuenta antes de publicar comercialmente; no se ha inventado ese acceso ni se ha afirmado que ya exista.
 - El contenido educativo se incluye localmente para uso sin conexión. El control de acceso de la app evita desbloqueos accidentales o una bandera Pro heredada; no es DRM frente a un APK/EXE modificado por terceros.
 
+## Diagnóstico de proveedores
+
+Antes de culpar a la app, este comando dice qué proveedor está operativo y qué variable, permiso o precio falta, sin imprimir ninguna clave:
+
+```powershell
+node --env-file-if-exists=.env src/diagnose.mjs
+```
+
+Sale con código 1 si algún proveedor configurado falla. Distingue clave rechazada (401), precio o plan inexistente (404), clave sin permiso (403), precio/periodo incorrecto (503) y error de API. Con `DIAGNOSTICS_TOKEN` definido en el servidor, el mismo informe está en `GET /api/diagnostics` con `Authorization: Bearer <token>`; sin ese token la ruta responde 404 y con un token incorrecto 401. El token debe tener 24 caracteres o más.
+
 ## Pruebas incluidas
 
-Las once pruebas locales cubren métodos sin configurar, credenciales omitidas, banderas Pro manipuladas, checkout que no concede acceso, clics duplicados, vencimiento/cancelación, error del proveedor, webhook falso/repetido, revocación de filas duplicadas, recibos reutilizados por otra cuenta, firma Stripe adulterada/caducada, reembolso sin webhook, reconocimiento Google solo tras validar al propietario y rechazo de precios/periodos incorrectos antes de iniciar un pago. Los adaptadores de prueba no realizan llamadas ni cobros externos. No sustituyen pruebas sandbox con cuentas del comerciante.
+Las pruebas locales cubren métodos sin configurar, credenciales omitidas, banderas Pro manipuladas, checkout que no concede acceso, clics duplicados, vencimiento/cancelación, error del proveedor, webhook falso/repetido, revocación de filas duplicadas, recibos reutilizados por otra cuenta, firma Stripe adulterada/caducada, reembolso sin webhook, reconocimiento Google solo tras validar al propietario y rechazo de precios/periodos incorrectos antes de iniciar un pago. Los adaptadores de prueba no realizan llamadas ni cobros externos. No sustituyen pruebas sandbox con cuentas del comerciante.
 
 ## Documentación oficial consultada
 

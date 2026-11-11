@@ -10,7 +10,12 @@ const checkoutId = account => createHash('sha256').update(`velario:${account}:${
 async function api(url, options = {}) {
   const response = await fetch(url, { ...options, signal: AbortSignal.timeout(20_000) });
   let body; try { body = await response.json(); } catch { throw new PaymentError('Respuesta inválida del proveedor.'); }
-  if (!response.ok) throw new PaymentError('No se pudo verificar la operación con el proveedor.');
+  if (!response.ok) {
+    // El detalle del proveedor se registra en el servidor para diagnosticar claves o precios
+    // inválidos; al cliente solo le llega el mensaje genérico.
+    const detail = body?.error ? [body.error.type, body.error.code, body.error.message].filter(Boolean).join(' | ') : `HTTP ${response.status}`;
+    throw Object.assign(new PaymentError('No se pudo verificar la operación con el proveedor.'), { providerStatus: response.status, providerDetail: detail });
+  }
   return body;
 }
 export function verifyStripeSignature(raw, signature, secret, now = Date.now()) {
@@ -55,10 +60,14 @@ class StripeProvider {
     const result = await this.call('checkout/sessions', 'POST', {
       mode: 'subscription', 'line_items[0][price]': this.settings.priceId, 'line_items[0][quantity]':'1',
       expires_at:String((Math.floor(Date.now()/1_800_000)+2)*1800),
-      'payment_method_types[0]':'card', client_reference_id:account, 'metadata[account_id]':account,
+      // Managed Payments (Stripe como comerciante) exige tax_code en el producto y no admite
+      // texto propio; se desactiva por sesion para conservar el modelo de comerciante actual.
+      'managed_payments[enabled]':'false',
+      // Payment methods dinamicos: Stripe ya no admite payment_method_types en Checkout.
+      // Los metodos habilitados se gestionan en el Dashboard de Stripe.
+      client_reference_id:account, 'metadata[account_id]':account,
       'subscription_data[metadata][account_id]':account,
       success_url:`${this.config.publicBaseUrl}/return/success`, cancel_url:`${this.config.publicBaseUrl}/return/cancel`,
-      'custom_text[submit][message]':'Velario Pro: 2 USD cada semana. Renovación automática hasta cancelar.'
     }, checkoutId(account));
     if (Boolean(result.livemode) !== (this.config.mode === 'live') || !/^cs_/.test(result.id || '')
       || new URL(result.url).hostname !== 'checkout.stripe.com') throw new PaymentError('Checkout no válido.');
@@ -124,7 +133,12 @@ class StripeProvider {
   }
   async manage(row) {
     let subId = row.reference;
-    if (row.kind === 'checkout') subId = idOf((await this.call(`checkout/sessions/${encodeURIComponent(row.reference)}`)).subscription);
+    if (row.kind === 'checkout') {
+      const session = await this.call(`checkout/sessions/${encodeURIComponent(row.reference)}`);
+      subId = idOf(session.subscription);
+      // Un checkout abierto y no pagado no tiene suscripcion: no es un error del proveedor.
+      if (!subId) throw new PaymentError('Todavia no hay una suscripcion que gestionar. Completa el pago primero.', 404);
+    }
     const subscription = await this.subscription(subId);
     const result = await this.call('billing_portal/sessions','POST', { customer:idOf(subscription.customer), return_url:`${this.config.publicBaseUrl}/return/success` });
     if (new URL(result.url).hostname !== 'billing.stripe.com') throw new PaymentError('Portal inválido.');

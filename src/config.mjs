@@ -9,9 +9,11 @@ export function readConfig(env = process.env) {
   if (env.STRIPE_SECRET_KEY && !(mode === 'live' ? /^sk_live_/ : /^sk_test_/).test(env.STRIPE_SECRET_KEY)) {
     throw new Error('Stripe key does not match PAYMENTS_MODE');
   }
+  if (env.DIAGNOSTICS_TOKEN && env.DIAGNOSTICS_TOKEN.length < 24) throw new Error('DIAGNOSTICS_TOKEN must be at least 24 characters');
   return {
     host: env.HOST || '127.0.0.1', port: Number(env.PORT || 8787), mode, publicBaseUrl,
     databasePath: path.resolve(env.DATABASE_PATH || './data/velario.sqlite'),
+    diagnosticsToken: env.DIAGNOSTICS_TOKEN || '',
     stripe: { key: env.STRIPE_SECRET_KEY, webhookSecret: env.STRIPE_WEBHOOK_SECRET, priceId: env.STRIPE_PRICE_ID },
     paypal: { clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET,
       webhookId: env.PAYPAL_WEBHOOK_ID, planId: env.PAYPAL_PLAN_ID },
