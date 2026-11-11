@@ -64,3 +64,8 @@ es la unica copia de nada importante.
 
 Ojo: los tokens emitidos antes de este cambio son aleatorios y no se pueden reconstruir. Un cliente
 antiguo tiene que abrir la app y empezar de cero.
+
+IMPORTANTE: define `ACCOUNT_SECRET` **antes** de vender y no lo cambies despues. Al cambiarlo,
+todos los tokens emitidos dejan de valer y esos clientes pierden el vinculo con su compra.
+Si falta, el servidor lo deriva de `STRIPE_SECRET_KEY` (funciona, pero rotar esa clave cortaria
+las sesiones de todo el mundo).
