@@ -69,3 +69,19 @@ IMPORTANTE: define `ACCOUNT_SECRET` **antes** de vender y no lo cambies despues.
 todos los tokens emitidos dejan de valer y esos clientes pierden el vinculo con su compra.
 Si falta, el servidor lo deriva de `STRIPE_SECRET_KEY` (funciona, pero rotar esa clave cortaria
 las sesiones de todo el mundo).
+
+## 6. PayPal (opcional)
+
+PayPal se activa solo cuando existen estas cuatro variables en Render -> Environment:
+
+| Variable | De donde se saca |
+| --- | --- |
+| `PAYPAL_CLIENT_ID` | developer.paypal.com -> Apps & Credentials -> tu app (Live para cobrar, Sandbox para probar) |
+| `PAYPAL_CLIENT_SECRET` | el "Secret" de esa misma app |
+| `PAYPAL_PLAN_ID` | plan de suscripcion de 2 USD por semana -> el id `P-...` |
+| `PAYPAL_WEBHOOK_ID` | webhook apuntando a https://velario-payments.onrender.com/webhooks/paypal |
+
+Mientras falte alguna, `/api/config` devuelve `paypal:false`, el checkout responde 503
+"Este metodo de pago todavia no esta configurado" y el resto de metodos (tarjeta, Apple Pay,
+Google Pay, Link) funciona con normalidad. No hace falta tocar codigo ni redesplegar nada
+mas que guardar las variables.
