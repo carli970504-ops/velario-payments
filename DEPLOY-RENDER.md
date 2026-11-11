@@ -28,6 +28,8 @@ Build Command: `npm install`   Start Command: `npm start`   Health Check Path: `
 1. Sube el contenido de esta carpeta a ese repositorio (misma rama que usa el servicio).
 2. Render reconstruye solo al detectar el push (Auto-Deploy).
 
+Aviso: el Auto-Deploy solo existe si el servicio esta conectado por **Git Provider** (Settings -> Source -> pestana Git Provider, con la app de Render instalada en GitHub). Si el origen es una **URL de repositorio publico**, Render no recibe avisos de GitHub y hay que desplegar a mano con *Manual Deploy -> Deploy latest commit*.
+
 ### Si no hay repositorio todavia
 1. Crea un repositorio vacio en GitHub (privado vale).
 2. `git remote add origin https://github.com/USUARIO/velario-payments.git`
