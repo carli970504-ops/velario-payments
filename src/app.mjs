@@ -3,12 +3,14 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { PRODUCT_ID } from './config.mjs';
 import { PaymentError } from './providers.mjs';
 import { diagnoseProviders } from './diagnostics.mjs';
+import { createAccounts, readAccountSecret } from './account.mjs';
 
 const json = (res, status, data) => {
   res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
   res.end(JSON.stringify(data));
 };
 const validRef = v => typeof v === 'string' && v.length > 0 && v.length <= 8192;
+const validAccount = v => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 async function body(req) {
   const chunks = []; let size = 0;
   for await (const chunk of req) {
@@ -23,7 +25,7 @@ function parse(raw) {
   catch { throw new PaymentError('JSON inválido.',400); }
 }
 
-export function createApp({ config, store, providers, log = console }) {
+export function createApp({ config, store, providers, log = console, accounts = createAccounts(readAccountSecret().secret) }) {
   const rates = new Map(), locks = new Map();
   // Apple Pay, Google Pay y Link los presenta Checkout de Stripe sobre el método card:
   // se anuncian disponibles cuando Stripe está configurado y el dispositivo los admite.
@@ -41,9 +43,25 @@ export function createApp({ config, store, providers, log = console }) {
     const next=before.catch(()=>{}).then(work); locks.set(key,next);
     try {return await next;} finally {if(locks.get(key)===next) locks.delete(key);}
   }
+  // Si la base local se ha borrado (disco efimero), el vinculo se reconstruye desde el
+  // proveedor con el identificador de cuenta que viaja firmado en el token.
+  async function recover(account) {
+    let found=0;
+    const stripe=providers.stripe;
+    if(stripe?.configured && typeof stripe.findByAccount==='function')
+      for(const id of await stripe.findByAccount(account)) {store.bind('stripe',id,account,'subscription');found++;}
+    const play=providers.play;
+    if(play?.configured && typeof play.findByAccount==='function')
+      for(const id of await play.findByAccount(account)) {store.bind('play',id,account,'subscription');found++;}
+    return found;
+  }
   async function entitlement(account) {
     const entitlements=[], errors=[];
-    for (const row of store.rows(account)) {
+    let rows=store.rows(account);
+    if(!rows.length) {
+      try {if(await recover(account)) rows=store.rows(account);} catch(error) {errors.push(error);}
+    }
+    for (const row of rows) {
       const provider=providers[row.provider];
       try {
         const value=await provider.inspect(row.reference,account,row.kind,row);
@@ -62,7 +80,8 @@ export function createApp({ config, store, providers, log = console }) {
     return locked(`event:${providerName}:${event.id}`,async()=>{
       if(store.seen(providerName,event.id)) return {received:true,duplicate:true};
       for(const update of event.updates) {
-        if(!store.exists(update.account) || !validRef(update.reference)) continue;
+        if(!validAccount(update.account) || !validRef(update.reference)) continue;
+        store.ensure(update.account);
         await locked(update.account,async()=>{
           store.bind(providerName,update.reference,update.account,update.kind);
           // A checkout and its subscription may both be bound. Revoke both views.
@@ -103,10 +122,18 @@ export function createApp({ config, store, providers, log = console }) {
       }
       if(req.method==='POST' && url.pathname==='/api/session') {
         rate(`session:${req.socket.remoteAddress}`,10);
-        return json(res,201,store.session());
+        const session=accounts.issue();
+        store.ensure(session.accountId);
+        return json(res,201,session);
       }
       const auth=req.headers.authorization;
-      const account=typeof auth==='string' && /^Bearer [A-Za-z0-9_-]{43}$/.test(auth) && store.authenticate(auth.slice(7));
+      let account=null;
+      if(typeof auth==='string' && /^Bearer [A-Za-z0-9_.-]{20,300}$/.test(auth)) {
+        const token=auth.slice(7);
+        // Token firmado (sigue valido aunque se borre el disco) o, por compatibilidad, token antiguo.
+        account=accounts.verify(token);
+        if(account) store.ensure(account); else account=store.authenticate(token);
+      }
       if(!account) throw new PaymentError('Sesión inválida.',401);
       rate(`account:${account}`,60);
       if(req.method==='GET' && url.pathname==='/api/play/ready') {
@@ -141,7 +168,9 @@ export function createApp({ config, store, providers, log = console }) {
         }));
       }
       if(req.method==='POST' && url.pathname==='/api/manage') {
-        const rows=store.rows(account), row=rows.filter(v=>v.active).sort((a,b)=>Date.parse(b.expires_at)-Date.parse(a.expires_at))[0] || rows[0];
+        let rows=store.rows(account);
+        if(!rows.length) {try {if(await recover(account)) rows=store.rows(account);} catch { /* nada recuperable */ }}
+        const row=rows.filter(v=>v.active).sort((a,b)=>Date.parse(b.expires_at)-Date.parse(a.expires_at))[0] || rows[0];
         if(!row) throw new PaymentError('No hay suscripción para gestionar.',404);
         return json(res,200,await providers[row.provider].manage(row));
       }

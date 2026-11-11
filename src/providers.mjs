@@ -92,6 +92,23 @@ class StripeProvider {
     return stripeEntitlement(sub, account, this.settings.priceId, row.revoked_at);
   }
   subscription(id) { return this.call(`subscriptions/${encodeURIComponent(id)}?expand[]=latest_invoice`); }
+  // Reconstruye el vinculo cuenta -> suscripcion sin depender de la base local:
+  // la cuenta viaja firmada en el token y la verdad esta en los metadatos de Stripe.
+  async findByAccount(account, maxPages = 20) {
+    if (!this.configured) unavailable();
+    const found = [];
+    let after = null;
+    for (let page = 0; page < maxPages; page++) {
+      const query = new URLSearchParams({ limit: '100', status: 'all' });
+      if (after) query.set('starting_after', after);
+      const result = await this.call(`subscriptions?${query}`);
+      const data = Array.isArray(result.data) ? result.data : [];
+      for (const sub of data) if (sub.metadata?.account_id === account) found.push(sub.id);
+      if (!result.has_more || data.length === 0) break;
+      after = data[data.length - 1].id;
+    }
+    return found;
+  }
   async paymentVerified(invoiceId) {
     if (!invoiceId) return false;
     const payments = await this.call(`invoice_payments?invoice=${encodeURIComponent(invoiceId)}&status=paid&limit=100&expand[]=data.payment.payment_intent.latest_charge`);

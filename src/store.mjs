@@ -22,6 +22,10 @@ export class Store {
     return { accountId, token };
   }
   authenticate(token) { return this.db.prepare('SELECT id FROM accounts WHERE token_hash=?').get(hash(token))?.id; }
+  // Alta perezosa: el token firmado identifica la cuenta sin depender de esta tabla.
+  ensure(account) {
+    this.db.prepare('INSERT OR IGNORE INTO accounts VALUES (?,?,?)').run(account, 'signed:' + randomBytes(16).toString('hex'), Date.now());
+  }
   exists(account) { return Boolean(this.db.prepare('SELECT id FROM accounts WHERE id=?').get(account)); }
   bind(provider, reference, account, kind, url = null) {
     const old = this.db.prepare('SELECT account_id FROM purchases WHERE provider=? AND reference=?').get(provider, reference);

@@ -18,7 +18,7 @@ log('GET /api/config', config.ok, `HTTP ${config.status} ${JSON.stringify(config
 
 const session = await req('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
 const token = session.body?.token;
-log('POST /api/session', session.status === 201 && typeof token === 'string' && token.length === 43,
+log('POST /api/session', session.status === 201 && typeof token === 'string' && (token.startsWith('v1.') || token.length === 43),
   `HTTP ${session.status} accountId=${session.body?.accountId} tokenLen=${token?.length}`);
 if (!token) { console.log(JSON.stringify(out, null, 2)); process.exit(1); }
 
