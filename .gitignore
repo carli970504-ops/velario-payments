@@ -4,3 +4,6 @@ data/
 token.txt
 push-result.txt
 ACCOUNT_SECRET-para-render.txt
+
+.paypal-creds
+paypal-env.txt

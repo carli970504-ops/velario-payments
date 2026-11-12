@@ -87,3 +87,10 @@ Mientras falte alguna, `/api/config` devuelve `paypal:false`, el checkout respon
 "Este metodo de pago todavia no esta configurado" y el resto de metodos (tarjeta, Apple Pay,
 Google Pay, Link) funciona con normalidad. No hace falta tocar codigo ni redesplegar nada
 mas que guardar las variables.
+
+### Crear el plan y el webhook automaticamente
+1. Crea una app en developer.paypal.com (Sandbox para pruebas, Live para cobrar).
+2. Guarda el client id y el secret en el archivo `.paypal-creds`, uno por linea (esta ignorado por git).
+3. Ejecuta `node tools/paypal_setup.mjs`: crea el producto, el plan semanal de 2 USD y el webhook en /webhooks/paypal, y escribe `paypal-env.txt` con PAYPAL_PLAN_ID y PAYPAL_WEBHOOK_ID.
+4. Pega las cuatro variables en Render: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_PLAN_ID, PAYPAL_WEBHOOK_ID.
+Con PAYMENTS_MODE=test se usa el sandbox de PayPal; con live, la cuenta real. Los dos entornos necesitan sus propias credenciales y su propio plan.
