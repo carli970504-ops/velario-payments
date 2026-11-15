@@ -150,6 +150,12 @@ try {
   const rep = JSON.parse(repetido || '{}');
   ok('saldo: el mismo pago no se acredita dos veces', rep.r === false && rep.igual === true, rep.aviso || '');
 
+  // ---- Pro debe sobrevivir a la compra de saldo ----
+  const proTrasSaldo = await ev("(async () => { await refreshBilling(); return JSON.stringify({ activo: isPro(), mensaje: billing.message }); })()");
+  console.log('  Pro tras saldo:', proTrasSaldo);
+  const pts = JSON.parse(proTrasSaldo || '{}');
+  ok('Pro sigue activo después de comprar saldo', pts.activo === true && /Pro activo/i.test(pts.mensaje || ''), proTrasSaldo);
+
   // ---- Recompensa del reto con un modo de 3 letras (ETF) ----
   const reto = await ev("(async () => { try { const r = await velarioNative.claimReward('etf', 3); return JSON.stringify(r); } catch (e) { return JSON.stringify({ error: String(e && e.message || e) }); } })()");
   console.log('  reto:', reto);

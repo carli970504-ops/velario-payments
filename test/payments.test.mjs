@@ -247,3 +247,26 @@ test('reto diario: importes fuera de rango y modos inventados se rechazan',async
   assert.equal((await f.request('/api/rewards/daily',session.token,{mode:'oro',amount:5})).status,400);
   assert.equal(f.store.rewardFor(session.accountId,new Date().toISOString().slice(0,10)),null);
 });
+
+test('comprar saldo no altera ni regala el estado de Pro',async t=>{
+  const f=await fixture(t), session=(await f.request('/api/session',null,{})).body;
+  // En Stripe real una sesion de pago no tiene suscripcion: inspect falla en las filas de saldo.
+  f.providers.stripe.inspect=async(reference,account,kind)=>{
+    if(kind==='credit') throw new PaymentError('No such subscription: '+reference,404);
+    return {active:true,expiresAt:expiry(),status:'active'};
+  };
+  const checkout=(await f.request('/api/credits/checkout',session.token,{mode:'etf'})).body;
+  f.providers.stripe.creditSessions.get(checkout.reference).paid=true;
+  const claim=(await f.request('/api/credits/claim',session.token,{session:checkout.reference})).body;
+  assert.equal(claim.paid,true); assert.equal(claim.credits,1000);
+  const solo=(await f.request('/api/entitlement',session.token)).body;
+  assert.equal(solo.active,false);
+  assert.notEqual(solo.status,'verification_unavailable');
+  const manageSolo=await f.request('/api/manage',session.token,{});
+  assert.equal(manageSolo.status,404);
+  f.store.bind('stripe','sub_ok',session.accountId,'subscription');
+  const conPro=(await f.request('/api/entitlement',session.token)).body;
+  assert.equal(conPro.active,true);
+  const managePro=await f.request('/api/manage',session.token,{});
+  assert.equal(managePro.status,200);
+});

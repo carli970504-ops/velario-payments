@@ -34,10 +34,12 @@ const stripe = {
     if (!s.paid) return { paid: false, mode: s.mode, credits: 0, status: 'open' };
     return { paid: true, mode: s.mode, credits: 1000, status: 'paid' };
   },
-  async inspect(reference, account) {
+  async inspect(reference, account, kind) {
     const s = sessions.get(reference);
     if (!s) return { active: false, expiresAt: null, status: 'pending' };
     if (s.account !== account) throw Object.assign(new Error('La compra no corresponde a esta cuenta.'), { status: 403 });
+    // Igual que Stripe: una sesión de pago único no tiene suscripción que inspeccionar.
+    if (kind === 'credit') throw Object.assign(new Error('No such subscription: ' + reference), { status: 404 });
     const expiresAt = new Date(Date.now() + 7 * 864e5).toISOString();
     return s.paid ? { active: true, expiresAt, status: 'active' } : { active: false, expiresAt, status: 'pending' };
   },

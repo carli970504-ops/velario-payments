@@ -57,9 +57,13 @@ export function createApp({ config, store, providers, log = console, accounts = 
   }
   async function entitlement(account) {
     const entitlements=[], errors=[];
-    let rows=store.rows(account);
+    // Las compras de saldo son pagos unicos: no son suscripciones y no deben entrar en la
+    // verificacion de Pro (en Stripe su sesion no tiene suscripcion y la volvian "no disponible").
+    const proRows=()=>store.rows(account).filter(row=>row.kind!=='credit');
+    let rows=proRows();
     if(!rows.length) {
-      try {if(await recover(account)) rows=store.rows(account);} catch(error) {errors.push(error);}
+      try {if(await recover(account)) rows=proRows();} catch(error) {errors.push(error);}
+      rows=proRows();
     }
     for (const row of rows) {
       const provider=providers[row.provider];
@@ -207,8 +211,8 @@ export function createApp({ config, store, providers, log = console, accounts = 
         }));
       }
       if(req.method==='POST' && url.pathname==='/api/manage') {
-        let rows=store.rows(account);
-        if(!rows.length) {try {if(await recover(account)) rows=store.rows(account);} catch { /* nada recuperable */ }}
+        let rows=store.rows(account).filter(row=>row.kind!=='credit');
+        if(!rows.length) {try {if(await recover(account)) rows=store.rows(account).filter(row=>row.kind!=='credit');} catch { /* nada recuperable */ }}
         const row=rows.filter(v=>v.active).sort((a,b)=>Date.parse(b.expires_at)-Date.parse(a.expires_at))[0] || rows[0];
         if(!row) throw new PaymentError('No hay suscripción para gestionar.',404);
         return json(res,200,await providers[row.provider].manage(row));
