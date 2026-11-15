@@ -4,7 +4,7 @@ import { createHmac } from 'node:crypto';
 import { Store } from '../src/store.mjs';
 import { createApp } from '../src/app.mjs';
 import { readConfig, PRODUCT_ID } from '../src/config.mjs';
-import { createProviders, PaymentError, verifyStripeSignature, stripeEntitlement, paypalEntitlement, googleEntitlement } from '../src/providers.mjs';
+import { createProviders, PaymentError, verifyStripeSignature, stripeEntitlement, paypalEntitlement, googleEntitlement, checkoutExpiry } from '../src/providers.mjs';
 
 const expiry=()=>new Date(Date.now()+86400000).toISOString();
 function mockProviders() {
@@ -269,4 +269,12 @@ test('comprar saldo no altera ni regala el estado de Pro',async t=>{
   assert.equal(conPro.active,true);
   const managePro=await f.request('/api/manage',session.token,{});
   assert.equal(managePro.status,200);
+});
+
+test('el checkout caduca con el margen que exige Stripe',()=>{
+  const casos=[0,1_799_999,Date.now(),Date.now()+1_234_567,Date.now()+29*60_000];
+  for(const now of casos){
+    const margen=checkoutExpiry(now)-now/1000;
+    assert.ok(margen>=1800&&margen<=3600,'margen fuera de rango: '+margen+' s');
+  }
 });

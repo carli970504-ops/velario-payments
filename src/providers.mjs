@@ -7,6 +7,11 @@ const unavailable = () => { throw new PaymentError('Este método de pago todaví
 const future = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) && Date.parse(value) > Date.now();
 const idOf = value => typeof value === 'string' ? value : value?.id;
 const checkoutId = account => createHash('sha256').update(`velario:${account}:${Math.floor(Date.now()/1_800_000)}`).digest('hex').slice(0,36);
+// Stripe exige que expires_at quede entre 30 minutos y 24 horas en el futuro. Con un solo
+// bloque de 30 minutos el margen podia bajar de 30 y el checkout de saldo fallaba con 502.
+export function checkoutExpiry(now = Date.now()) {
+  return (Math.floor(now / 1_800_000) + 2) * 1800;
+}
 async function api(url, options = {}) {
   const response = await fetch(url, { ...options, signal: AbortSignal.timeout(20_000) });
   let body; try { body = await response.json(); } catch { throw new PaymentError('Respuesta inválida del proveedor.'); }
@@ -59,7 +64,7 @@ class StripeProvider {
     await this.validatePrice();
     const result = await this.call('checkout/sessions', 'POST', {
       mode: 'subscription', 'line_items[0][price]': this.settings.priceId, 'line_items[0][quantity]':'1',
-      expires_at:String((Math.floor(Date.now()/1_800_000)+2)*1800),
+      expires_at:String(checkoutExpiry()),
       // Managed Payments (Stripe como comerciante) exige tax_code en el producto y no admite
       // texto propio; se desactiva por sesion para conservar el modelo de comerciante actual.
       'managed_payments[enabled]':'false',
@@ -84,7 +89,7 @@ class StripeProvider {
       'line_items[0][price_data][currency]': CREDIT.currency,
       'line_items[0][price_data][unit_amount]': String(CREDIT.amount),
       'line_items[0][price_data][product_data][name]': `Saldo simulado ${CREDIT.credits} · ${mode}`,
-      expires_at: String((Math.floor(Date.now() / 1_800_000) + 1) * 1800),
+      expires_at: String(checkoutExpiry()),
       'managed_payments[enabled]': 'false',
       client_reference_id: account,
       'metadata[account_id]': account, 'metadata[mode]': mode, 'metadata[pack]': 'credit1000',
