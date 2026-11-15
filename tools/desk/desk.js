@@ -303,7 +303,7 @@ function deskPositions() {
 }
 function viewMesa() {
   if (!deskBridge()) {
-    return `<div class="stack"><h1>Mesa</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
+    return `<div class="stack"><h1>Astra Desk</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
   }
   const seg = `<div class="seg desk4">${Object.entries(DESK_SEGS).map(([k, v]) => `<button data-act="deskseg" data-v="${k}" aria-pressed="${DESK.seg === k}">${v.label}</button>`).join('')}</div>`;
   const msg = DESK.msg ? `<div class="card msg"><p style="margin:0;font-size:14px;color:var(--${DESK.msg.kind === 'up' ? 'up' : 'down'})">${esc(DESK.msg.text)}</p></div>` : '';

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zgyitjQbPv3HlfTWrU8mduL+eAfccIsykDV6fiKNGGI='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/Rn18uLLFwrheEYNU/OZseT6SZ836wZMFrZxtLWRn5A='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Velario</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -260,7 +260,7 @@ ul.look{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap
 <div class="tabs"><nav aria-label="Secciones">
   <button data-tab="inicio"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>Inicio</button>
   <button data-tab="aprende"><svg class="ic" viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2zM12 6v14"/></svg>Aprende</button>
-  <button data-tab="mesa"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Mesa</button>
+  <button data-tab="mesa"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Astra</button>
   <button data-tab="perfil"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Perfil</button>
 </nav></div>
 <div id="overlay" hidden></div>
@@ -1806,14 +1806,14 @@ function deskPositions() {
 }
 function viewMesa() {
   if (!deskBridge()) {
-    return `<div class="stack"><h1>Mesa</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
+    return `<div class="stack"><h1>Astra Desk</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
   }
   const seg = `<div class="seg desk4">${Object.entries(DESK_SEGS).map(([k, v]) => `<button data-act="deskseg" data-v="${k}" aria-pressed="${DESK.seg === k}">${v.label}</button>`).join('')}</div>`;
   const msg = DESK.msg ? `<div class="card msg"><p style="margin:0;font-size:14px;color:var(--${DESK.msg.kind === 'up' ? 'up' : 'down'})">${esc(DESK.msg.text)}</p></div>` : '';
   const err = DESK.err ? `<div class="card"><p class="muted" style="margin:0 0 10px">${esc(DESK.err)}</p><button class="btn ghost" data-act="deskrefresh">Reintentar</button></div>` : '';
   const list = `<div class="card desk-list">${DESK_SEGS[DESK.seg].items.map(([s, l]) => deskRow(s, l, s === DESK.sym)).join('')}</div>`;
   return `<div class="stack">
-    <div class="top" style="margin-bottom:0"><div><h1>Mesa</h1><p class="muted sub">Precios reales · operaciones simuladas</p></div>
+    <div class="top" style="margin-bottom:0"><div><h1>Astra Desk</h1><p class="muted sub">Precios reales · operaciones simuladas</p></div>
       <div class="stats-mini"><span class="row" style="gap:6px"><span class="mono cash-mini">${deskUsd(DT.cash)}</span></span><span class="pill mono">${deskUsd(deskEquity())}</span></div></div>
     ${seg}${msg}${err}${list}${DESK.seg === 'opciones' ? deskOptions() : deskDetail()}${deskPositions()}
     <p class="note">Datos de Yahoo Finance. Todo se ejecuta en simulado: nada de esto es dinero real ni asesoría financiera.</p></div>`;
