@@ -46,3 +46,13 @@
 .desk-warn svg.ic{width:16px;height:16px;flex:none;margin-top:1px;color:var(--accent-fg)}
 .desk-warn b{color:var(--accent-fg)}
 @keyframes deskWarn{0%,74%{opacity:1}100%{opacity:0;visibility:hidden}}
+
+/* Progreso y reto */
+.spark{width:100%;height:68px;display:block;overflow:visible}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 12px}
+.pgrid>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pgrid b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dgbox{border:1px solid var(--line);border-radius:14px;background:var(--chart);padding:6px;transition:box-shadow .15s ease}
+.dgbox svg.dgchart{display:block;width:100%;height:auto}
+.dgbox.good{box-shadow:inset 0 0 0 2px var(--up)}
+.dgbox.bad{box-shadow:inset 0 0 0 2px var(--down)}

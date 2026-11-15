@@ -1,5 +1,4 @@
-// Inyecta la Mesa dentro de index.html: pestaña, estilos, lógica, ruta y eventos.
-// Idempotente: si ya está, no toca el archivo. Recalcula el hash de la CSP.
+// Inyecta o actualiza la Mesa dentro de index.html y recalcula el hash de la CSP.
 //
 // Uso: node tools/apply-desk.mjs [ruta/al/index.html]
 
@@ -11,11 +10,45 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const archivo = process.argv[2] || path.join(here, '..', 'work-app', 'desktop', 'index.html');
 const css = fs.readFileSync(path.join(here, 'desk', 'desk.css'), 'utf8');
-let js = fs.readFileSync(path.join(here, 'desk', 'desk.js'), 'utf8');
+const js = fs.readFileSync(path.join(here, 'desk', 'desk.js'), 'utf8');
 
 let html = fs.readFileSync(archivo, 'utf8');
+
+const JS_START = '/* ===== Mesa: trading simulado';
+const JS_END = '/* ---------- eventos ---------- */';
+const CSS_START = '/* ===== Mesa ===== */';
+
+function reemplazarHash(texto) {
+  const block = texto.match(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/);
+  if (!block) throw new Error('No encontrado: script inline');
+  const hash = crypto.createHash('sha256').update(block[1], 'utf8').digest('base64');
+  const csp = texto.match(/script-src 'sha256-([^']+)'/);
+  if (!csp) throw new Error('No encontrado: hash de la CSP');
+  return { html: texto.replace(csp[1], () => hash), hash };
+}
+
+function guardar(texto) {
+  const { html: final, hash } = reemplazarHash(texto);
+  fs.writeFileSync(archivo, final);
+  console.log('Mesa escrita en', archivo);
+  console.log('  tamano:', Buffer.byteLength(final), 'bytes');
+  console.log('  hash CSP:', hash.slice(0, 12) + '...');
+}
+
 if (html.includes('DESK_SEGS')) {
-  console.log('la Mesa ya estaba dentro; no se toca nada');
+  // Ya estaba inyectada: se sustituyen CSS y JS por la versión actual.
+  const i = html.indexOf(JS_START);
+  const j = html.indexOf(JS_END);
+  if (i < 0 || j < 0 || j < i) throw new Error('No se pudo delimitar el bloque JS de la mesa');
+  html = html.slice(0, i) + js + '\n' + html.slice(j);
+
+  const ci = html.indexOf(CSS_START);
+  if (ci < 0) throw new Error('No se pudo delimitar el CSS de la mesa');
+  const ce = html.indexOf('</style>', ci);
+  if (ce < 0) throw new Error('No encontrado el cierre de estilos');
+  html = html.slice(0, ci) + css + '\n' + html.slice(ce);
+
+  guardar(html);
   process.exit(0);
 }
 
@@ -27,13 +60,13 @@ function reemplazar(buscado, nuevo, etiqueta) {
 // 1. Pestaña en la barra inferior
 reemplazar(
   '  <button data-tab="perfil">',
-  '  <button data-tab="mesa"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Mesa</button>\n  <button data-tab="perfil">',
-  'boton de la pestaña Mesa'
+  '  <button data-tab="mesa"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Astra</button>\n  <button data-tab="perfil">',
+  'boton de la pestaña Astra'
 );
 
 // 2. Estilos
 if (!html.includes('</style>')) throw new Error('No encontrado: cierre de estilos');
-html = html.replace('</style>', () => css + '</style>');
+html = html.replace('</style>', () => css + '\n</style>');
 
 // 3. Ruta: pintar la mesa y pedir datos
 reemplazar(
@@ -43,9 +76,9 @@ reemplazar(
 );
 
 // 4. Hash permitido (dos sitios)
-const hashes = html.split("['inicio', 'aprende', 'perfil']");
-if (hashes.length !== 3) throw new Error('No encontrado: lista de pestañas del hash');
-html = hashes.join("['inicio', 'aprende', 'mesa', 'perfil']");
+const partes = html.split("['inicio', 'aprende', 'perfil']");
+if (partes.length !== 3) throw new Error('No encontrado: lista de pestañas del hash');
+html = partes.join("['inicio', 'aprende', 'mesa', 'perfil']");
 
 // 5. Eventos de clic
 reemplazar(
@@ -72,21 +105,6 @@ reemplazar(
 );
 
 // 7. Lógica de la mesa antes de los eventos
-reemplazar(
-  '/* ---------- eventos ---------- */',
-  js + '\n/* ---------- eventos ---------- */',
-  'bloque de la mesa'
-);
+reemplazar(JS_END, js + '\n' + JS_END, 'bloque de la mesa');
 
-// 8. Hash de la CSP
-const scriptBlock = html.match(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/);
-if (!scriptBlock) throw new Error('No encontrado: script inline');
-const hash = crypto.createHash('sha256').update(scriptBlock[1], 'utf8').digest('base64');
-const csp = html.match(/script-src 'sha256-([^']+)'/);
-if (!csp) throw new Error('No encontrado: hash de la CSP');
-html = html.replace(csp[1], () => hash);
-
-fs.writeFileSync(archivo, html);
-console.log('Mesa insertada en', archivo);
-console.log('  tamano:', Buffer.byteLength(html), 'bytes');
-console.log('  hash CSP:', hash.slice(0, 12) + '...');
+guardar(html);
