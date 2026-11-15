@@ -1,6 +1,8 @@
 import path from 'node:path';
 
 export const PRODUCT_ID = 'velario.pro.weekly';
+// Saldo simulado: un pago único de 1 USD carga 1.000 en un solo modo del Centro de Operaciones.
+export const CREDIT = { amount: 100, currency: 'usd', credits: 1000, modes: ['cripto', 'acciones', 'etf', 'opciones'] };
 export function readConfig(env = process.env) {
   const publicBaseUrl = env.PUBLIC_BASE_URL || '';
   if (publicBaseUrl && !publicBaseUrl.startsWith('https://')) throw new Error('PUBLIC_BASE_URL must use HTTPS');

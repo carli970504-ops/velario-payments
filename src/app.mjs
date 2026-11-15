@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { PRODUCT_ID } from './config.mjs';
+import { PRODUCT_ID, CREDIT } from './config.mjs';
 import { PaymentError } from './providers.mjs';
 import { diagnoseProviders } from './diagnostics.mjs';
 import { createAccounts, readAccountSecret } from './account.mjs';
@@ -103,7 +103,8 @@ export function createApp({ config, store, providers, log = console, accounts = 
       if(req.headers.origin) throw new PaymentError('Usa la aplicación para esta operación.',403);
       rate(`ip:${req.socket.remoteAddress}`,120);
       if(req.method==='GET' && url.pathname==='/health') return json(res,200,{ok:true});
-      if(req.method==='GET' && url.pathname==='/api/config') return json(res,200,{productId:PRODUCT_ID,currency:'USD',amount:200,interval:'week',mode:config.mode,methods:methods()});
+      if(req.method==='GET' && url.pathname==='/api/config') return json(res,200,{productId:PRODUCT_ID,currency:'USD',amount:200,interval:'week',mode:config.mode,methods:methods(),
+        credits:{amount:CREDIT.amount,credits:CREDIT.credits,currency:'USD',modes:CREDIT.modes}});
       // Diagnóstico de proveedores: solo existe si DIAGNOSTICS_TOKEN está definido en el servidor.
       // Nunca devuelve claves; indica la variable, el permiso o el precio que falla.
       if(req.method==='GET' && url.pathname==='/api/diagnostics') {
@@ -165,6 +166,30 @@ export function createApp({ config, store, providers, log = console, accounts = 
           store.bind('play',input.purchaseToken,account,'subscription');
           store.update('play',input.purchaseToken,value);
           return entitlement(account);
+        }));
+      }
+      if(req.method==='POST' && url.pathname==='/api/credits/checkout') {
+        const input=parse(await body(req));
+        if(!CREDIT.modes.includes(input.mode)) throw new PaymentError('Modo no válido.',400);
+        if(!providers.stripe?.configured || typeof providers.stripe.createCredit!=='function') throw new PaymentError('Las compras de saldo todavía no están configuradas.',503);
+        rate(`credit:${account}`,6);
+        return json(res,200,await locked(account,async()=>{
+          const checkout=await providers.stripe.createCredit(account,input.mode);
+          store.bind('stripe',checkout.reference,account,'credit',checkout.url);
+          return {url:checkout.url,reference:checkout.reference,mode:checkout.mode,credits:CREDIT.credits,amount:CREDIT.amount,currency:'USD'};
+        }));
+      }
+      if(req.method==='POST' && url.pathname==='/api/credits/claim') {
+        const input=parse(await body(req));
+        if(!validRef(input.session)) throw new PaymentError('Compra inválida.',400);
+        if(typeof providers.stripe?.claimCredit!=='function') throw new PaymentError('Las compras de saldo todavía no están configuradas.',503);
+        rate(`creditclaim:${account}`,20);
+        return json(res,200,await locked(account,async()=>{
+          const value=await providers.stripe.claimCredit(input.session,account);
+          if(!value.paid) return {paid:false,mode:value.mode,credits:0,status:value.status};
+          // El alta es única: la clave primaria de la sesion impide acreditar dos veces.
+          const first=store.creditClaim(input.session,account,value.mode,value.credits);
+          return {paid:true,mode:value.mode,credits:first?value.credits:0,alreadyCredited:!first};
         }));
       }
       if(req.method==='POST' && url.pathname==='/api/manage') {

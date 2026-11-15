@@ -83,7 +83,22 @@ function createBilling({ baseUrl, readAccount, writeAccount, fetchImpl = fetch, 
     const result = await call('/api/manage', { method: 'POST', body: '{}', headers: { Authorization: `Bearer ${user.token}` } });
     await openExternal(checkoutUrl(result.url));
   }
-  return { getStatus, purchase, restore: getStatus, manage };
+  // Saldo simulado: pago único de 1 USD que carga 1.000 en un modo concreto.
+  async function creditCheckout(mode) {
+    if (!base) throw new Error('Las compras todavía no están habilitadas en esta edición.');
+    if (!/^(cripto|acciones|etf|opciones)$/.test(String(mode))) throw new Error('Modo no válido.');
+    const user = await account();
+    const result = await call('/api/credits/checkout', { method: 'POST', body: JSON.stringify({ mode }), headers: { Authorization: `Bearer ${user.token}` } });
+    await openExternal(checkoutUrl(result.url));
+    return { reference: result.reference, mode: result.mode, credits: result.credits, amount: result.amount };
+  }
+  async function creditClaim(session) {
+    if (!base) throw new Error('Las compras todavía no están habilitadas en esta edición.');
+    if (typeof session !== 'string' || !session || session.length > 200) throw new Error('Compra no válida.');
+    const user = await account();
+    return call('/api/credits/claim', { method: 'POST', body: JSON.stringify({ session }), headers: { Authorization: `Bearer ${user.token}` } });
+  }
+  return { getStatus, purchase, restore: getStatus, manage, creditCheckout, creditClaim };
 }
 
 module.exports = { PRODUCT, apiBase, entitlement, checkoutUrl, createBilling };

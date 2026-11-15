@@ -55,6 +55,16 @@ app.whenReady().then(() => {
     return billing.purchase(method);
   });
   ipcMain.handle('billing:manage', event => { if (!trusted(event)) throw new Error('Origen no permitido.'); return billing.manage(); });
+  ipcMain.handle('billing:credit-checkout', (event, mode) => {
+    if (!trusted(event)) throw new Error('Origen no permitido.');
+    if (typeof mode !== 'string' || !/^[a-z]{4,12}$/.test(mode)) throw new Error('Modo no válido.');
+    return billing.creditCheckout(mode);
+  });
+  ipcMain.handle('billing:credit-claim', (event, session) => {
+    if (!trusted(event)) throw new Error('Origen no permitido.');
+    if (typeof session !== 'string' || session.length > 200) throw new Error('Compra no válida.');
+    return billing.creditClaim(session);
+  });
   registerMarket(ipcMain, trusted);
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

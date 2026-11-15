@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual, createSign } from 'node:crypto';
 import fs from 'node:fs';
-import { PRODUCT_ID } from './config.mjs';
+import { PRODUCT_ID, CREDIT } from './config.mjs';
 
 export class PaymentError extends Error { constructor(message, status = 502) { super(message); this.status = status; } }
 const unavailable = () => { throw new PaymentError('Este método de pago todavía no está configurado.', 503); };
@@ -73,6 +73,40 @@ class StripeProvider {
       || new URL(result.url).hostname !== 'checkout.stripe.com') throw new PaymentError('Checkout no válido.');
     return { reference:result.id, kind:'checkout', url:result.url,
       message:method === 'applepay' ? 'Apple Pay aparece si Stripe y tu dispositivo son compatibles.' : undefined };
+  }
+  // Compra única de saldo simulado: 1 USD = 1.000 en un modo concreto.
+  async createCredit(account, mode) {
+    if (!this.settings.key || !this.config.publicBaseUrl) unavailable();
+    if (!CREDIT.modes.includes(mode)) throw new PaymentError('Modo no válido.', 400);
+    const result = await this.call('checkout/sessions', 'POST', {
+      mode: 'payment',
+      'line_items[0][quantity]': '1',
+      'line_items[0][price_data][currency]': CREDIT.currency,
+      'line_items[0][price_data][unit_amount]': String(CREDIT.amount),
+      'line_items[0][price_data][product_data][name]': `Saldo simulado ${CREDIT.credits} · ${mode}`,
+      expires_at: String((Math.floor(Date.now() / 1_800_000) + 1) * 1800),
+      'managed_payments[enabled]': 'false',
+      client_reference_id: account,
+      'metadata[account_id]': account, 'metadata[mode]': mode, 'metadata[pack]': 'credit1000',
+      'payment_intent_data[metadata][account_id]': account, 'payment_intent_data[metadata][mode]': mode,
+      success_url: `${this.config.publicBaseUrl}/return/success`, cancel_url: `${this.config.publicBaseUrl}/return/cancel`
+    }, `credit-${account}-${mode}-${Math.floor(Date.now() / 60_000)}`);
+    if (Boolean(result.livemode) !== (this.config.mode === 'live') || !/^cs_/.test(result.id || '')
+      || new URL(result.url).hostname !== 'checkout.stripe.com') throw new PaymentError('Checkout no válido.');
+    return { reference: result.id, url: result.url, mode };
+  }
+  // Solo lee y valida; el alta del saldo la decide la app con su registro de compras.
+  async claimCredit(reference, account) {
+    if (!this.settings.key || !this.config.publicBaseUrl) unavailable();
+    const session = await this.call(`checkout/sessions/${encodeURIComponent(reference)}`);
+    if (session.client_reference_id !== account || session.metadata?.account_id !== account) throw new PaymentError('La compra no corresponde a esta cuenta.', 403);
+    if (session.mode !== 'payment' || session.metadata?.pack !== 'credit1000') throw new PaymentError('Esa compra no es saldo.', 400);
+    const mode = session.metadata?.mode;
+    if (!CREDIT.modes.includes(mode)) throw new PaymentError('Modo no válido.', 400);
+    if (Boolean(session.livemode) !== (this.config.mode === 'live')) throw new PaymentError('Entorno de compra incorrecto.', 403);
+    if (session.payment_status !== 'paid') return { paid: false, mode, credits: 0, status: session.status || 'pending' };
+    if (Number(session.amount_total) !== CREDIT.amount || session.currency !== CREDIT.currency) throw new PaymentError('Importe de la compra inesperado.', 400);
+    return { paid: true, mode, credits: CREDIT.credits, status: 'paid' };
   }
   async inspect(reference, account, kind, row = {}) {
     await this.validatePrice();

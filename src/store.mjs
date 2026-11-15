@@ -14,7 +14,9 @@ export class Store {
         kind TEXT NOT NULL, active INTEGER DEFAULT 0, expires_at TEXT, status TEXT, revoked_at INTEGER DEFAULT 0, checked_at INTEGER DEFAULT 0,
         checkout_url TEXT, created INTEGER NOT NULL,
         PRIMARY KEY(provider, reference));
-      CREATE TABLE IF NOT EXISTS events (provider TEXT NOT NULL, id TEXT NOT NULL, received INTEGER NOT NULL, PRIMARY KEY(provider,id));`);
+      CREATE TABLE IF NOT EXISTS events (provider TEXT NOT NULL, id TEXT NOT NULL, received INTEGER NOT NULL, PRIMARY KEY(provider,id));
+      CREATE TABLE IF NOT EXISTS credits (session TEXT PRIMARY KEY, account_id TEXT NOT NULL, mode TEXT NOT NULL,
+        credits INTEGER NOT NULL, credited_at INTEGER NOT NULL);`);
   }
   session() {
     const accountId = randomUUID(), token = randomBytes(32).toString('base64url');
@@ -46,6 +48,14 @@ export class Store {
     this.db.prepare('UPDATE purchases SET revoked_at=MAX(revoked_at,?),active=0,status=? WHERE provider=? AND account_id=?')
       .run(at, 'revoked', provider, account);
   }
+  // Acredita una compra una sola vez: la clave primaria de la sesion lo garantiza.
+  creditClaim(session, account, mode, credits) {
+    const result = this.db.prepare('INSERT OR IGNORE INTO credits VALUES (?,?,?,?,?)')
+      .run(session, account, mode, credits, Date.now());
+    return Number(result.changes) === 1;
+  }
+  creditFor(session) { return this.db.prepare('SELECT * FROM credits WHERE session=?').get(session) || null; }
+  creditsOf(account) { return this.db.prepare('SELECT * FROM credits WHERE account_id=? ORDER BY credited_at DESC').all(account); }
   seen(provider, id) { return Boolean(this.db.prepare('SELECT id FROM events WHERE provider=? AND id=?').get(provider,id)); }
   event(provider, id) { this.db.prepare('INSERT OR IGNORE INTO events VALUES(?,?,?)').run(provider,id,Date.now()); }
   close() { this.db.close(); }

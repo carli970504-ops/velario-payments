@@ -8,9 +8,18 @@ import { createProviders, PaymentError, verifyStripeSignature, stripeEntitlement
 
 const expiry=()=>new Date(Date.now()+86400000).toISOString();
 function mockProviders() {
-  let checked=0;
-  const provider={ configured:true, creates:0,
+  let checked=0, credits=0;
+  const creditSessions=new Map();
+  const provider={ configured:true, creates:0, creditSessions,
     async create(account) { this.creates++; return { reference:'cs_test_'+this.creates, kind:'checkout',url:'https://checkout.stripe.com/test/'+this.creates }; },
+    async createCredit(account,mode) { credits++; const reference='cs_credit_'+credits;
+      creditSessions.set(reference,{account,mode,paid:false,amount:100});
+      return { reference, url:'https://checkout.stripe.com/test/credit/'+credits, mode }; },
+    async claimCredit(reference,account) { const value=creditSessions.get(reference);
+      if(!value || value.account!==account) throw new PaymentError('La compra no corresponde a esta cuenta.',403);
+      if(!value.paid) return {paid:false,mode:value.mode,credits:0,status:'open'};
+      if(value.amount!==100) throw new PaymentError('Importe de la compra inesperado.',400);
+      return {paid:true,mode:value.mode,credits:1000,status:'paid'}; },
     async inspect() { checked++; return {active:false,expiresAt:null,status:'pending'}; },
     async verifyWebhook() { throw new PaymentError('Firma inválida',400); },
     async manage() {return {url:'https://billing.stripe.com/test'};}
@@ -178,4 +187,43 @@ test('gestionar un checkout abierto y sin pagar responde 404 claro, no 502 gener
     ? {active:true,type:'recurring',currency:'usd',unit_amount:200,recurring:{interval:'week',interval_count:1}}
     : {id:'cs_open',subscription:null};
   await assert.rejects(() => stripe.manage({reference:'cs_open',kind:'checkout'}), /Completa el pago/);
+});
+
+test('saldo: solo modos válidos, y no acredita hasta que el pago está confirmado',async t=>{
+  const f=await fixture(t), session=(await f.request('/api/session',null,{})).body;
+  assert.equal((await f.request('/api/credits/checkout',session.token,{mode:'oro'})).status,400);
+  assert.equal((await f.request('/api/credits/checkout',session.token,{mode:'etf',amount:1,credits:99999})).body.credits,1000);
+  const created=await f.request('/api/credits/checkout',session.token,{mode:'opciones'});
+  assert.equal(created.status,200);
+  assert.match(created.body.url,/^https:\/\/checkout\.stripe\.com\//);
+  const pending=await f.request('/api/credits/claim',session.token,{session:created.body.reference});
+  assert.equal(pending.body.paid,false);
+  assert.equal(pending.body.credits,0);
+});
+
+test('saldo: se acredita una vez, en el modo comprado y solo a su dueño',async t=>{
+  const f=await fixture(t), session=(await f.request('/api/session',null,{})).body;
+  const other=(await f.request('/api/session',null,{})).body;
+  const created=(await f.request('/api/credits/checkout',session.token,{mode:'etf'})).body;
+  f.providers.stripe.creditSessions.get(created.reference).paid=true;
+  assert.equal((await f.request('/api/credits/claim',other.token,{session:created.reference})).status,403);
+  const first=await f.request('/api/credits/claim',session.token,{session:created.reference});
+  assert.equal(first.body.paid,true); assert.equal(first.body.mode,'etf'); assert.equal(first.body.credits,1000);
+  const again=await f.request('/api/credits/claim',session.token,{session:created.reference});
+  assert.equal(again.body.credits,0); assert.equal(again.body.alreadyCredited,true);
+  assert.equal(f.store.creditFor(created.reference).mode,'etf');
+});
+
+test('saldo: importe manipulado o proveedor sin configurar no acreditan nada',async t=>{
+  const f=await fixture(t), session=(await f.request('/api/session',null,{})).body;
+  const created=(await f.request('/api/credits/checkout',session.token,{mode:'acciones'})).body;
+  const value=f.providers.stripe.creditSessions.get(created.reference);
+  value.paid=true; value.amount=1;
+  assert.equal((await f.request('/api/credits/claim',session.token,{session:created.reference})).status,400);
+  assert.equal(f.store.creditFor(created.reference),null);
+
+  const config=readConfig({}), empty=await fixture(t,createProviders(config));
+  const s=(await empty.request('/api/session',null,{})).body;
+  assert.equal((await empty.request('/api/credits/checkout',s.token,{mode:'etf'})).status,503);
+  assert.equal((await empty.request('/api/credits/claim',s.token,{session:'cs_x'})).status,503);
 });

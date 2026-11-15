@@ -9,5 +9,7 @@ contextBridge.exposeInMainWorld('velarioNative', {
   getStatus: () => ipcRenderer.invoke('billing:status'),
   restore: () => ipcRenderer.invoke('billing:status'),
   purchase: method => ipcRenderer.invoke('billing:purchase', method),
-  manage: () => ipcRenderer.invoke('billing:manage')
+  manage: () => ipcRenderer.invoke('billing:manage'),
+  topup: mode => ipcRenderer.invoke('billing:credit-checkout', mode),
+  claimTopup: session => ipcRenderer.invoke('billing:credit-claim', session)
 });
