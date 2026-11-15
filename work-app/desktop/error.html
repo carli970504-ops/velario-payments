@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Velario · no se pudo cargar</title>
+<style>
+  :root{--bg:#eef1f6;--surface:#fff;--ink:#141c2b;--muted:#566379;--line:#d3dbe8;--accent:#f0a421}
+  @media (prefers-color-scheme:dark){:root{--bg:#0d1420;--surface:#151e2e;--ink:#e9eef7;--muted:#93a1ba;--line:#26324b}}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:400 15px/1.55 system-ui,'Segoe UI',sans-serif;padding:28px 20px;display:grid;place-items:center}
+  main{max-width:520px;width:100%}
+  h1{font-size:24px;margin:0 0 8px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+  p{margin:0 0 12px}
+  .muted{color:var(--muted);font-size:13.5px}
+  code{font:13px/1.5 ui-monospace,Consolas,monospace;word-break:break-all}
+  .btn{display:inline-block;padding:10px 16px;border-radius:10px;background:var(--accent);color:#1c1204;font-weight:700;text-decoration:none}
+  .steps{margin:0;padding-left:20px}
+  .steps li{margin-bottom:6px}
+</style>
+</head>
+<body><main>
+  <h1>Velario no pudo abrir la pantalla</h1>
+  <p class="muted">La aplicación está instalada, pero el archivo de la interfaz no se cargó. No se ha perdido tu progreso.</p>
+  <div class="card">
+    <p><a class="btn" href="index.html">Reintentar</a></p>
+    <p class="muted" style="margin-top:14px">Si vuelve a fallar, revisa el registro:</p>
+    <p><code>%APPDATA%\Velario\velario.log</code></p>
+    <p class="muted">Cómo llegar: tecla Windows + R y pega <code>%APPDATA%\Velario</code>.</p>
+  </div>
+  <div class="card">
+    <p class="muted" style="margin:0 0 8px"><b>Qué puedes hacer</b></p>
+    <ol class="steps muted">
+      <li>Cierra Velario y vuelve a abrirlo.</li>
+      <li>Comprueba que el antivirus no haya puesto en cuarentena <code>resources\app.asar</code>.</li>
+      <li>Reinstala la misma versión encima; tus datos y tu cuenta de compras se conservan.</li>
+      <li>Si sigue igual, envía el registro a soporte desde velario.app/soporte.</li>
+    </ol>
+  </div>
+</main></body></html>

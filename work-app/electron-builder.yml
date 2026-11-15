@@ -1,0 +1,37 @@
+# Instalador de Velario para Windows.
+# La firma se toma de CSC_LINK / CSC_KEY_PASSWORD (certificado .pfx); sin ellas el
+# instalador se genera igual pero sin firmar y Windows mostrará "editor desconocido".
+appId: app.velario.desktop
+productName: Velario
+copyright: © 2026 Velario
+directories:
+  app: .
+  output: dist
+  buildResources: build
+files:
+  - desktop/**/*
+  - package.json
+  - "!desktop/index.html.backup*"
+extraMetadata:
+  main: desktop/main.cjs
+asar: true
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: Velario-${version}-setup.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Velario
+  uninstallDisplayName: Velario ${version}
+  # El desinstalador nunca borra la cuenta de compras ni el progreso del usuario.
+  deleteAppDataOnUninstall: false
+  artifactName: Velario-${version}-setup.${ext}
+publish: null

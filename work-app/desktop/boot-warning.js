@@ -1,0 +1,24 @@
+(function () {
+  if (window.__velarioWarning) return 'ya';
+  window.__velarioWarning = true;
+  var box = document.createElement('div');
+  box.id = 'velario-warning';
+  box.setAttribute('role', 'alert');
+  box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;background:#fff4d6;color:#241703;border:1px solid #d9a03a;border-radius:12px;padding:12px 14px;font:14px/1.45 system-ui,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.22)';
+  var title = document.createElement('b');
+  title.textContent = 'Velario tardó demasiado en cargar.';
+  var text = document.createElement('div');
+  text.textContent = 'La interfaz puede no haber arrancado. Registro: ' + __LOG_PATH__;
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;margin-top:8px';
+  var retry = document.createElement('button');
+  retry.textContent = 'Reintentar';
+  retry.style.cssText = 'padding:7px 14px;border:0;border-radius:8px;background:#f0a421;color:#1c1204;font:600 13px system-ui;cursor:pointer';
+  retry.onclick = function () { location.reload(); };
+  row.appendChild(retry);
+  box.appendChild(title);
+  box.appendChild(text);
+  box.appendChild(row);
+  (document.body || document.documentElement).appendChild(box);
+  return 'ok';
+})();

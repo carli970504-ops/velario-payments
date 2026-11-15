@@ -1,11 +1,23 @@
 <!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-T0UKMBUEhlffMmblTGab/FXgakLgP/mGQydFo3HriNI='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-xossjxA3nYJ7z9JQBEadEQ+T9e0mlK6AkW/n6nbXgTg='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Velario</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
+/* ===== Arranque seguro ===== */
+#boot{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:var(--bg);padding:24px;text-align:center}
+#boot .boot-in{max-width:400px;display:grid;gap:10px;justify-items:center}
+#boot h1{font-size:26px}
+#boot .spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:bspin .9s linear infinite}
+@keyframes bspin{to{transform:rotate(360deg)}}
+#boot[data-state="error"] .spin{display:none}
+#boot .boot-detail{font:12px/1.5 var(--f-mono);color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:180px;overflow:auto;text-align:left;width:100%;background:var(--surface2);border-radius:10px;padding:10px;margin:0}
+#boot .boot-actions{display:flex;gap:8px;justify-content:center}
+#boot .boot-hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+#boot .boot-hint a{color:var(--accent-fg)}
+
 /* Layout: app móvil de una columna, gráfica como protagonista, barra de pestañas inferior.
    Paleta: pizarra azulada + ámbar. Tipos: Bricolage Grotesque (títulos), IBM Plex Sans (texto), IBM Plex Mono (precios). */
 :root{
@@ -273,6 +285,20 @@ ul.look{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap
 
 </style>
 </head><body>
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-in">
+    <div class="spin" aria-hidden="true"></div>
+    <h1 id="boot-title">Velario</h1>
+    <p id="boot-msg" class="muted">Preparando la mesa…</p>
+    <pre id="boot-detail" class="boot-detail" hidden></pre>
+    <div id="boot-actions" class="boot-actions" hidden>
+      <button class="btn" data-boot="retry">Reintentar</button>
+      <button class="btn ghost" data-boot="logs">Abrir registro</button>
+    </div>
+    <p class="boot-hint"><a href="error.html">Diagnóstico de arranque</a></p>
+  </div>
+</div>
+
 <div class="wrap"><main id="view"></main></div>
 <div class="tabs"><nav aria-label="Secciones">
   <button data-tab="inicio"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>Inicio</button>
@@ -282,6 +308,44 @@ ul.look{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap
 </nav></div>
 <div id="overlay" hidden></div>
 <script>
+/* ===== Arranque seguro: si algo falla antes de pintar, se ve un aviso claro ===== */
+(function bootGuard() {
+  const shell = document.getElementById('boot');
+  const title = document.getElementById('boot-title');
+  const msg = document.getElementById('boot-msg');
+  const detail = document.getElementById('boot-detail');
+  const actions = document.getElementById('boot-actions');
+  const native = window.velarioNative || {};
+  const send = (kind, text) => { try { if (native.log) native.log(kind, text); } catch (error) { /* sin registro */ } };
+  let failed = false;
+  function fail(kind, error) {
+    if (failed) return;
+    failed = true;
+    const text = (error && (error.stack || error.message)) || String(error || 'Error desconocido');
+    send(kind, text);
+    if (!shell) { document.body && (document.body.textContent = 'Velario no pudo iniciar. ' + text); return; }
+    shell.dataset.state = 'error';
+    shell.hidden = false;
+    if (title) title.textContent = 'No se pudo abrir Velario';
+    if (msg) msg.textContent = kind === 'csp'
+      ? 'La política de seguridad (CSP) bloqueó el código de la app. Reinstala o envía el registro a soporte.'
+      : 'Algo falló al preparar la pantalla. Puedes reintentar sin perder tu progreso.';
+    if (detail) { detail.hidden = false; detail.textContent = text.slice(0, 800); }
+    if (actions) actions.hidden = false;
+  }
+  window.velarioBootFail = fail;
+  window.addEventListener('error', event => fail('error', event.error || event.message));
+  window.addEventListener('unhandledrejection', event => fail('promesa', event.reason));
+  document.addEventListener('securitypolicyviolation', event => fail('csp', (event.violatedDirective || 'directiva') + ' ' + (event.blockedURI || '')));
+  if (actions) actions.addEventListener('click', async event => {
+    const boton = event.target.closest('button');
+    if (!boton) return;
+    if (boton.dataset.boot === 'retry') location.reload();
+    if (boton.dataset.boot === 'logs') { try { await native.openLogs(); } catch (error) { /* nada */ } }
+  });
+  setTimeout(() => { if (!window.__velarioReady) fail('tiempo', 'La interfaz no terminó de cargar en 10 segundos.'); }, 10000);
+})();
+
 /* ===== Velario · lógica de patrones (datos simulados) ===== */
 const rnd = () => Math.random();
 const U = (a, b) => a + rnd() * (b - a);
@@ -2207,6 +2271,8 @@ document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click
 window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (['inicio', 'aprende', 'mesa', 'perfil'].includes(t) && t !== tab) { tab = t; render(); } });
 { const t = location.hash.slice(1); if (['inicio', 'aprende', 'mesa', 'perfil'].includes(t)) tab = t; }
 render();
+window.__velarioReady = true;
+try { const b = document.getElementById('boot'); if (b) b.remove(); if (window.velarioNative && window.velarioNative.bootOk) window.velarioNative.bootOk(); } catch (error) { /* la app ya pintó */ }
 window.addEventListener('velario:billing', event => applyBilling(event.detail));
 window.velarioBack = () => {
   if (!ov().hidden) { closeOv(); return true; }
