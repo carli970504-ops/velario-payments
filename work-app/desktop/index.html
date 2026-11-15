@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TImmfRFPU/Y+sklmzwhDi5jzLJZ0sOEnMopUKHmLPFA='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zgyitjQbPv3HlfTWrU8mduL+eAfccIsykDV6fiKNGGI='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Velario</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -212,12 +212,55 @@ ul.look{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap
 .fx.quiet *{animation:none!important}
 .fx.quiet .cartel{transform:translate(-50%,0)}
 .fx.quiet .thief{right:22px;opacity:1}
+/* ===== Mesa ===== */
+.seg.desk4{grid-template-columns:repeat(4,1fr)}
+.tabs button{padding:11px 15px}
+.desk-list{display:flex;flex-direction:column;gap:0;padding:6px 8px}
+.desk-row{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:11px 8px;border-radius:12px;text-align:left;color:inherit}
+.desk-row+.desk-row{box-shadow:inset 0 1px 0 var(--line)}
+.desk-row[aria-pressed="true"]{background:var(--surface2)}
+.desk-row .ds{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.desk-row .ds b{font-size:15px;letter-spacing:.01em}
+.desk-row .ds small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.desk-row .dp{font:600 14px var(--f-mono)}
+.pct{font:600 12px var(--f-mono);padding:3px 8px;border-radius:999px;background:var(--surface2);min-width:68px;text-align:right}
+.pct.up{color:var(--up)}
+.pct.dn{color:var(--down)}
+.tfbar{display:flex;gap:6px;flex-wrap:wrap}
+.tfbar button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font:600 12px var(--f-body);color:var(--muted)}
+.tfbar button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.desk-chart{background:var(--chart);border:1px solid var(--line);border-radius:16px;padding:6px}
+.desk-chart svg{display:block;width:100%;height:auto}
+.desk-empty{text-align:center;color:var(--muted);padding:34px 10px;font-size:13px}
+.ticket{display:flex;align-items:center;gap:10px}
+.ticket input{width:82px;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:11px 8px;font:600 15px var(--f-mono);color:var(--ink);text-align:center}
+.chain{display:grid;grid-template-columns:1fr auto 1fr;gap:6px 8px;align-items:center}
+.chain .h{font:600 10px var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-align:center}
+.chain button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 6px;font:600 13px var(--f-mono);color:var(--ink)}
+.chain button:active{background:var(--surface2)}
+.chain .k{text-align:center;font:600 13px var(--f-mono);color:var(--muted)}
+.pos{display:flex;align-items:center;gap:10px;padding:10px 0}
+.pos+.pos{border-top:1px solid var(--line)}
+.pos .pn{flex:1;min-width:0}
+.pos .pn b{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pos .pn small{color:var(--muted);font-size:12px;display:block}
+.pos .pv{text-align:right;white-space:nowrap}
+.pos .pv b{display:block;font-size:14px}
+.pos .pv small{font-size:12px;display:block}
+.msg{border-left:3px solid var(--accent);padding:12px 14px}
+@media (max-width:430px){
+  .tabs button{padding:10px 9px;font-size:12px;gap:5px}
+  .tabs button svg.ic{width:15px;height:15px}
+  .desk-row .dp{font-size:13px}
+  .pct{min-width:60px}
+}
 </style>
 </head><body>
 <div class="wrap"><main id="view"></main></div>
 <div class="tabs"><nav aria-label="Secciones">
   <button data-tab="inicio"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>Inicio</button>
   <button data-tab="aprende"><svg class="ic" viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2zM12 6v14"/></svg>Aprende</button>
+  <button data-tab="mesa"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Mesa</button>
   <button data-tab="perfil"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Perfil</button>
 </nav></div>
 <div id="overlay" hidden></div>
@@ -1266,7 +1309,8 @@ function viewPerfil() {
 
 function render() {
   const root = document.getElementById('view');
-  root.innerHTML = tab === 'inicio' ? viewInicio() : tab === 'aprende' ? viewAprende() : viewPerfil();
+  root.innerHTML = tab === 'inicio' ? viewInicio() : tab === 'aprende' ? viewAprende() : tab === 'mesa' ? viewMesa() : viewPerfil();
+  if (tab === 'mesa') deskEnsure();
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
 }
 function go(t) { tab = t; try { history.replaceState(null, '', '#' + t); } catch (e) { } render(); window.scrollTo(0, 0); }
@@ -1457,6 +1501,331 @@ function finish() {
   ov().scrollTop = 0;
 }
 
+/* ===== Mesa: trading simulado con precios reales de Yahoo Finance ===== */
+const DESK_KEY = 'velario.desk.v1';
+const DESK_SEGS = {
+  cripto: { label: 'Cripto', items: [['BTC-USD', 'Bitcoin'], ['ETH-USD', 'Ethereum'], ['SOL-USD', 'Solana'], ['XRP-USD', 'XRP'], ['DOGE-USD', 'Dogecoin'], ['ADA-USD', 'Cardano']] },
+  acciones: { label: 'Acciones', items: [['AAPL', 'Apple'], ['MSFT', 'Microsoft'], ['NVDA', 'Nvidia'], ['TSLA', 'Tesla'], ['AMZN', 'Amazon'], ['META', 'Meta']] },
+  etf: { label: 'ETF', items: [['SPY', 'S&P 500'], ['QQQ', 'Nasdaq 100'], ['IWM', 'Russell 2000'], ['DIA', 'Dow Jones 30'], ['GLD', 'Oro'], ['XLE', 'Energía']] },
+  opciones: { label: 'Opciones', items: [['SPY', 'S&P 500'], ['QQQ', 'Nasdaq 100'], ['AAPL', 'Apple'], ['NVDA', 'Nvidia'], ['TSLA', 'Tesla']] }
+};
+const DESK_TF = { '1D': ['1d', '5m'], '5D': ['5d', '15m'], '1M': ['1mo', '1d'], '6M': ['6mo', '1d'], '1A': ['1y', '1wk'] };
+
+let DESK = {
+  seg: 'cripto', sym: 'BTC-USD', tf: '1D', qty: 1,
+  q: {}, chart: null, chartSym: '', chartTf: '', chartErr: null,
+  vol: {}, err: null, msg: null, segLoaded: '', lastLoad: 0,
+  opt: { under: 'SPY', exp: null, chain: null, busy: false }
+};
+let DT = deskLoad();
+
+function deskLoad() {
+  try {
+    const r = JSON.parse(localStorage.getItem(DESK_KEY) || 'null');
+    if (r && r.pos && typeof r.pos === 'object' && !Array.isArray(r.pos)) {
+      const pos = {};
+      for (const [id, p] of Object.entries(r.pos)) {
+        if (!p || typeof p !== 'object' || !p.sym || !(Number(p.qty) > 0)) continue;
+        pos[String(id)] = {
+          id: String(id), sym: String(p.sym).toUpperCase(), name: String(p.name || p.sym),
+          kind: p.kind === 'opt' ? 'opt' : 'spot', qty: Number(p.qty), avg: Number(p.avg) || 0,
+          type: p.type === 'put' ? 'put' : 'call', strike: Number(p.strike) || 0, exp: String(p.exp || '')
+        };
+      }
+      const cash = Number(r.cash);
+      return { pos, cash: Number.isFinite(cash) && cash >= 0 ? cash : 10000, trades: Math.max(0, Number(r.trades) || 0), realized: Number(r.realized) || 0 };
+    }
+  } catch (e) { }
+  return { pos: {}, cash: 10000, trades: 0, realized: 0 };
+}
+function deskPersist() {
+  try { localStorage.setItem(DESK_KEY, JSON.stringify(DT)); } catch (e) { }
+  save();
+}
+const deskBridge = () => window.velarioMarket || null;
+const deskUsd = v => Number.isFinite(v) ? (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+const deskPctTxt = v => Number.isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(2) + '%' : '—';
+const deskIso = d => d.toISOString().slice(0, 10);
+function deskCash(delta) {
+  DT.cash = Math.max(0, Math.round((DT.cash + delta) * 100) / 100);
+}
+const deskNum = n => Math.abs(n) >= 1 ? (Math.round(n * 100) / 100).toString() : (+n.toFixed(6)).toString();
+function deskSay(kind, text) {
+  DESK.msg = { kind, text };
+  render();
+}
+
+/* ---------- datos ---------- */
+async function deskQuotes(symbols) {
+  const bridge = deskBridge();
+  if (!bridge) return false;
+  const res = await bridge.quotes(symbols).catch(error => ({ ok: false, error: error.message }));
+  if (!res || !res.ok) { DESK.err = res?.error || 'No se pudieron leer los precios.'; return false; }
+  DESK.err = null;
+  for (const q of res.data) DESK.q[q.symbol] = q;
+  return true;
+}
+async function deskChart() {
+  const bridge = deskBridge();
+  if (!bridge) return;
+  const [range, interval] = DESK_TF[DESK.tf] || DESK_TF['1D'];
+  const sym = DESK.sym, tf = DESK.tf;
+  DESK.chartSym = sym; DESK.chartTf = tf; DESK.chartErr = null;
+  const res = await bridge.chart(sym, range, interval).catch(error => ({ ok: false, error: error.message }));
+  if (DESK.sym !== sym || DESK.tf !== tf) return;
+  if (res && res.ok) {
+    DESK.chart = res.data;
+    DESK.q[res.data.symbol] = { symbol: res.data.symbol, name: res.data.name, price: res.data.price, prev: res.data.prev, changePct: res.data.changePct };
+  } else {
+    DESK.chart = null;
+    DESK.chartErr = res?.error || 'Sin datos para ese gráfico.';
+  }
+  if (tab === 'mesa') render();
+}
+async function deskVol(sym) {
+  if (DESK.vol[sym]) return DESK.vol[sym];
+  const bridge = deskBridge();
+  if (!bridge) return 0.35;
+  const res = await bridge.chart(sym, '3mo', '1d').catch(() => null);
+  const closes = res && res.ok ? res.data.candles.map(c => c.c).filter(Number.isFinite) : [];
+  if (closes.length < 10) return (DESK.vol[sym] = 0.35);
+  const rets = [];
+  for (let i = 1; i < closes.length; i++) if (closes[i - 1] > 0) rets.push(Math.log(closes[i] / closes[i - 1]));
+  const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+  const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, rets.length - 1);
+  const vol = Math.sqrt(variance) * Math.sqrt(252);
+  return (DESK.vol[sym] = Math.min(1.6, Math.max(0.08, Number.isFinite(vol) ? vol : 0.35)));
+}
+function deskEnsure(force) {
+  if (!deskBridge()) return;
+  if (!force && DESK.segLoaded === DESK.seg && Date.now() - DESK.lastLoad < 20000) return;
+  DESK.segLoaded = DESK.seg;
+  DESK.lastLoad = Date.now();
+  const items = DESK_SEGS[DESK.seg].items.map(x => x[0]);
+  deskQuotes(items).then(() => {
+    if (tab !== 'mesa') return;
+    if (DESK.seg === 'opciones') { deskChain(); } else { deskChart(); }
+    render();
+  });
+}
+
+/* ---------- opciones (precio simulado) ---------- */
+function deskN(x) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989423 * Math.exp(-x * x / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return x > 0 ? 1 - p : p;
+}
+function deskBS(type, spot, strike, T, vol, rate = 0.04) {
+  if (!(spot > 0) || !(strike > 0)) return 0;
+  if (T <= 0) return Math.max(0, type === 'call' ? spot - strike : strike - spot);
+  const s = Math.max(0.01, vol) * Math.sqrt(T);
+  const d1 = (Math.log(spot / strike) + (rate + s * s / 2) * T) / s, d2 = d1 - s;
+  const disc = Math.exp(-rate * T);
+  return type === 'call' ? spot * deskN(d1) - strike * disc * deskN(d2) : strike * disc * deskN(-d2) - spot * deskN(-d1);
+}
+function deskExpiries(n) {
+  const out = [];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 7);
+  while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+  for (let i = 0; i < (n || 3); i++) { out.push(new Date(d)); d.setDate(d.getDate() + 7); }
+  return out;
+}
+function deskOptPrice(p) {
+  const spot = DESK.q[p.sym]?.price ?? p.avg;
+  const days = Math.max(0, (new Date(p.exp + 'T20:00:00Z').getTime() - Date.now()) / 864e5);
+  return deskBS(p.type, spot, p.strike, days / 365, DESK.vol[p.sym] || 0.35);
+}
+async function deskChain() {
+  if (!deskBridge() || DESK.opt.busy) return;
+  DESK.opt.busy = true;
+  try {
+    const under = DESK.opt.under;
+    await deskQuotes([under]);
+    const q = DESK.q[under];
+    if (!q) { DESK.opt.chain = null; return; }
+    const vol = await deskVol(under);
+    const exps = deskExpiries(3);
+    const exp = DESK.opt.exp && exps.some(d => deskIso(d) === DESK.opt.exp) ? DESK.opt.exp : deskIso(exps[0]);
+    DESK.opt.exp = exp;
+    const days = Math.max(1, Math.round((new Date(exp + 'T20:00:00Z').getTime() - Date.now()) / 864e5));
+    const T = days / 365;
+    const step = q.price < 25 ? 1 : q.price < 100 ? 2.5 : q.price < 500 ? 5 : 10;
+    const strikes = [...new Set([-0.1, -0.05, 0, 0.05, 0.1].map(k => Math.round(q.price * (1 + k) / step) * step))].sort((a, b) => a - b);
+    const rows = strikes.map(K => ({ K, call: deskBS('call', q.price, K, T, vol), put: deskBS('put', q.price, K, T, vol) }));
+    DESK.opt.chain = { under, exp, days, T, vol, spot: q.price, rows };
+  } catch (e) {
+    DESK.opt.chain = null;
+    DESK.err = 'No se pudo calcular la cadena de opciones.';
+  } finally {
+    DESK.opt.busy = false;
+    if (tab === 'mesa') render();
+  }
+}
+
+/* ---------- cartera ---------- */
+function deskPriceOf(sym) { return DESK.q[sym]?.price ?? null; }
+function deskValue(p) {
+  if (p.kind === 'opt') return p.qty * 100 * deskOptPrice(p);
+  return p.qty * (deskPriceOf(p.sym) ?? p.avg);
+}
+function deskCostOf(p) { return p.kind === 'opt' ? p.qty * 100 * p.avg : p.qty * p.avg; }
+function deskEquity() { return Object.values(DT.pos).reduce((s, p) => s + deskValue(p), 0) + DT.cash; }
+
+function deskTradeSpot(side) {
+  const q = DESK.q[DESK.sym];
+  if (!q || !q.price) return deskSay('down', 'Todavía no hay precio para ese símbolo.');
+  const n = Math.max(0.0001, Number(DESK.qty) || 1);
+  const held = DT.pos[q.symbol];
+  if (side === 'buy') {
+    const cost = n * q.price;
+    if (cost > DT.cash + 1e-9) return deskSay('down', `Te faltan ${deskUsd(cost - DT.cash)} para esa compra.`);
+    deskCash(-cost);
+    if (held) { held.avg = (held.avg * held.qty + cost) / (held.qty + n); held.qty += n; }
+    else DT.pos[q.symbol] = { id: q.symbol, sym: q.symbol, name: `${q.symbol} · ${q.name || ''}`.trim(), kind: 'spot', qty: n, avg: q.price };
+    DT.trades++; deskPersist();
+    deskSay('up', `Compraste ${deskNum(n)} ${q.symbol} a ${deskUsd(q.price)}.`);
+  } else {
+    if (!held) return deskSay('down', `No tienes ${q.symbol} en cartera.`);
+    const m = Math.min(held.qty, n);
+    const ingreso = m * q.price;
+    DT.realized += (q.price - held.avg) * m;
+    deskCash(ingreso);
+    held.qty -= m;
+    if (held.qty <= 1e-9) delete DT.pos[held.sym];
+    DT.trades++; deskPersist();
+    deskSay('up', `Vendiste ${deskNum(m)} ${q.symbol} a ${deskUsd(q.price)}.`);
+  }
+}
+function deskBuyOption(type, strike) {
+  const chain = DESK.opt.chain;
+  if (!chain) return deskSay('down', 'La cadena de opciones aún no está lista.');
+  const row = chain.rows.find(r => Math.abs(r.K - strike) < 1e-9);
+  if (!row) return deskSay('down', 'Ese contrato ya no está disponible.');
+  const n = Math.max(1, Math.floor(Number(DESK.qty) || 1));
+  const premium = row[type];
+  const cost = n * 100 * premium;
+  if (cost > DT.cash + 1e-9) return deskSay('down', `Esa orden cuesta ${deskUsd(cost)} y no te alcanza.`);
+  const id = `${chain.under}|${chain.exp}|${type}|${strike}`;
+  deskCash(-cost);
+  const held = DT.pos[id];
+  if (held) { held.avg = (held.avg * held.qty + premium * n) / (held.qty + n); held.qty += n; }
+  else DT.pos[id] = { id, sym: chain.under, name: `${chain.under} ${type === 'call' ? 'Call' : 'Put'} ${strike}`, kind: 'opt', qty: n, avg: premium, type, strike, exp: chain.exp };
+  DT.trades++; deskPersist();
+  deskSay('up', `Compraste ${n} contrato${n > 1 ? 's' : ''} ${type.toUpperCase()} ${strike} de ${chain.under} por ${deskUsd(cost)}.`);
+}
+function deskClose(id) {
+  const p = DT.pos[id];
+  if (!p) return;
+  const value = deskValue(p);
+  DT.realized += value - deskCostOf(p);
+  deskCash(value);
+  delete DT.pos[id];
+  DT.trades++; deskPersist();
+  deskSay('up', `Cerraste ${p.name} por ${deskUsd(value)}.`);
+}
+
+/* ---------- acciones de interfaz ---------- */
+function deskSeg(seg) {
+  if (!DESK_SEGS[seg]) return;
+  DESK.seg = seg;
+  DESK.sym = DESK_SEGS[seg].items[0][0];
+  DESK.tf = '1D';
+  DESK.chart = null; DESK.chartErr = null; DESK.msg = null;
+  if (seg === 'opciones') { DESK.opt.under = DESK.sym; DESK.opt.exp = null; DESK.opt.chain = null; }
+  render();
+  deskEnsure(true);
+}
+function deskPick(sym) {
+  DESK.msg = null;
+  if (DESK.seg === 'opciones') {
+    DESK.opt.under = sym; DESK.sym = sym; DESK.opt.exp = null; DESK.opt.chain = null;
+    render(); deskEnsure(true); return;
+  }
+  DESK.sym = sym; DESK.chart = null; DESK.chartErr = null;
+  render(); deskChart();
+}
+
+/* ---------- vistas ---------- */
+function deskRow(sym, label, selected) {
+  const q = DESK.q[sym];
+  const cls = !q ? '' : q.changePct > 0 ? 'up' : q.changePct < 0 ? 'dn' : '';
+  return `<button class="desk-row" data-act="desksym" data-id="${sym}" aria-pressed="${selected ? 'true' : 'false'}">
+    <span class="ds"><b>${sym}</b><small>${esc(label)}</small></span>
+    <span class="dp">${q ? deskUsd(q.price) : '—'}</span>
+    <span class="pct ${cls}">${q ? deskPctTxt(q.changePct) : '—'}</span></button>`;
+}
+function deskChartBox() {
+  if (DESK.chartErr) return `<div class="desk-empty">${esc(DESK.chartErr)}</div>`;
+  if (!DESK.chart || DESK.chartSym !== DESK.sym || DESK.chartTf !== DESK.tf) return '<div class="desk-empty">Cargando gráfica…</div>';
+  const cs = DESK.chart.candles.map(c => ({ o: c.o, c: c.c, h: c.h, l: c.l }));
+  const dec = DESK.chart.price >= 1000 ? 2 : 2;
+  return chart({ c: cs, after: [], dec, lines: [], showHl: false }, false, 236);
+}
+function deskDetail() {
+  const q = DESK.q[DESK.sym];
+  const cls = !q ? '' : q.changePct > 0 ? 'up' : q.changePct < 0 ? 'dn' : '';
+  const total = DESK.qty * (q?.price || 0);
+  return `<div class="card stack" style="gap:12px">
+    <div class="row between" style="align-items:flex-start">
+      <div style="min-width:0"><div class="eyebrow">${DESK_SEGS[DESK.seg].label}</div><h2 style="margin-top:4px">${DESK.sym}</h2><p class="muted" style="font-size:13px;margin-top:2px">${esc(q?.name || '')}</p></div>
+      <div style="text-align:right;flex:none"><div class="mono" style="font-size:22px;font-weight:600">${q ? deskUsd(q.price) : '—'}</div><span class="pct ${cls}" style="display:inline-block;margin-top:4px">${q ? deskPctTxt(q.changePct) : '—'}</span></div>
+    </div>
+    <div class="tfbar">${Object.keys(DESK_TF).map(t => `<button data-act="desktf" data-v="${t}" aria-pressed="${DESK.tf === t}">${t}</button>`).join('')}</div>
+    <div class="desk-chart">${deskChartBox()}</div>
+    <div class="ticket"><label class="eyebrow" for="dq">Cantidad</label><input id="dq" type="number" min="0.0001" step="any" inputmode="decimal" value="${DESK.qty}"><span class="mono muted" style="margin-left:auto" id="dTotal">${deskUsd(total)}</span></div>
+    <div class="row" style="gap:10px"><button class="btn" data-act="deskbuy" style="flex:1">Comprar</button><button class="btn ghost" data-act="desksell" style="flex:1">Vender</button></div>
+    <p class="note" style="margin:0">Precio real de Yahoo Finance (puede ir con retraso). La orden es simulada y se paga con tu saldo.</p></div>`;
+}
+function deskOptions() {
+  const chain = DESK.opt.chain;
+  const exps = deskExpiries(3);
+  const head = `<div class="card stack" style="gap:12px">
+    <div class="row between"><div><div class="eyebrow">Opciones simuladas</div><h2 style="margin-top:4px">${DESK.opt.under}</h2><p class="muted" style="font-size:13px;margin-top:2px">${chain ? `${deskUsd(chain.spot)} · volatilidad ${(chain.vol * 100).toFixed(0)}% · ${chain.days} días` : 'Calculando cadena…'}</p></div>
+    <span class="pill mono">1 contrato = 100</span></div>
+    <div class="chips">${exps.map(d => `<button data-act="deskoptexp" data-v="${deskIso(d)}" aria-pressed="${DESK.opt.exp === deskIso(d)}">${deskIso(d).slice(5)}</button>`).join('')}</div>
+    ${chain ? `<div class="chain"><span class="h">Call</span><span class="h">Strike</span><span class="h">Put</span>
+      ${chain.rows.map(r => `<button data-act="deskopt" data-k="call:${r.K}">${deskUsd(r.call)}</button><span class="k">${r.K % 1 ? r.K.toFixed(2) : r.K}</span><button data-act="deskopt" data-k="put:${r.K}">${deskUsd(r.put)}</button>`).join('')}</div>
+      <div class="ticket"><label class="eyebrow" for="dq">Contratos</label><input id="dq" type="number" min="1" step="1" inputmode="numeric" value="${DESK.qty}"><span class="muted" style="margin-left:auto;font-size:12px">Toca un precio para comprar</span></div>` : '<div class="desk-empty">Cargando cadena de opciones…</div>'}
+    <p class="note" style="margin:0">Contratos simulados: el precio sale de Black-Scholes con el precio real del subyacente y su volatilidad reciente. No son opciones reales de mercado.</p></div>`;
+  return head;
+}
+function deskPositions() {
+  const list = Object.values(DT.pos);
+  if (!list.length) return `<div class="card"><div class="row between"><span class="eyebrow">Tu cartera</span><b class="mono">${deskUsd(deskEquity())}</b></div><p class="muted" style="margin-top:8px">Sin posiciones todavía.</p></div>`;
+  return `<div class="card">
+    <div class="row between" style="margin-bottom:6px"><span class="eyebrow">Tu cartera · ${list.length}</span><b class="mono">${deskUsd(deskEquity())}</b></div>
+    ${list.map(p => {
+      const value = deskValue(p), cost = deskCostOf(p), diff = value - cost;
+      return `      <div class="pos"><div class="pn"><b>${esc(p.name)}</b><small>${deskNum(p.qty)} ${p.kind === 'opt' ? 'contrato' + (p.qty > 1 ? 's' : '') : 'unidad' + (p.qty > 1 ? 'es' : '')} · ${p.kind === 'opt' ? 'vence ' + p.exp : 'media ' + deskUsd(p.avg)}</small></div>
+        <div class="pv"><b>${deskUsd(value)}</b><small style="color:var(--${diff >= 0 ? 'up' : 'down'})">${diff >= 0 ? '+' : ''}${deskUsd(diff)}</small></div>
+        <button class="link" data-act="deskclose" data-id="${esc(p.id)}" style="padding:6px 0 6px 8px">Cerrar</button></div>`;
+    }).join('')}</div>`;
+}
+function viewMesa() {
+  if (!deskBridge()) {
+    return `<div class="stack"><h1>Mesa</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
+  }
+  const seg = `<div class="seg desk4">${Object.entries(DESK_SEGS).map(([k, v]) => `<button data-act="deskseg" data-v="${k}" aria-pressed="${DESK.seg === k}">${v.label}</button>`).join('')}</div>`;
+  const msg = DESK.msg ? `<div class="card msg"><p style="margin:0;font-size:14px;color:var(--${DESK.msg.kind === 'up' ? 'up' : 'down'})">${esc(DESK.msg.text)}</p></div>` : '';
+  const err = DESK.err ? `<div class="card"><p class="muted" style="margin:0 0 10px">${esc(DESK.err)}</p><button class="btn ghost" data-act="deskrefresh">Reintentar</button></div>` : '';
+  const list = `<div class="card desk-list">${DESK_SEGS[DESK.seg].items.map(([s, l]) => deskRow(s, l, s === DESK.sym)).join('')}</div>`;
+  return `<div class="stack">
+    <div class="top" style="margin-bottom:0"><div><h1>Mesa</h1><p class="muted sub">Precios reales · operaciones simuladas</p></div>
+      <div class="stats-mini"><span class="row" style="gap:6px"><span class="mono cash-mini">${deskUsd(DT.cash)}</span></span><span class="pill mono">${deskUsd(deskEquity())}</span></div></div>
+    ${seg}${msg}${err}${list}${DESK.seg === 'opciones' ? deskOptions() : deskDetail()}${deskPositions()}
+    <p class="note">Datos de Yahoo Finance. Todo se ejecuta en simulado: nada de esto es dinero real ni asesoría financiera.</p></div>`;
+}
+
+/* Refresco automático mientras la mesa está abierta */
+setInterval(() => {
+  if (tab !== 'mesa' || document.hidden || !deskBridge()) return;
+  const items = DESK_SEGS[DESK.seg].items.map(x => x[0]);
+  deskQuotes(items).then(ok => { if (ok && tab === 'mesa') render(); });
+}, 30000);
+
 /* ---------- eventos ---------- */
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) return;
@@ -1480,18 +1849,28 @@ document.addEventListener('click', e => {
   else if (a === 'practice') startPractice();
   else if (a === 'pick') pick(id);
   else if (a === 'next' && SS && SS.qs[SS.i]?.pick !== null) { SS.i++; if (SS.i >= SS.qs.length) finish(); else showQ(); }
+  else if (a === 'deskseg') deskSeg(el.dataset.v);
+  else if (a === 'desksym') deskPick(el.dataset.id);
+  else if (a === 'desktf') { DESK.tf = el.dataset.v; DESK.chart = null; render(); deskChart(); }
+  else if (a === 'deskbuy') deskTradeSpot('buy');
+  else if (a === 'desksell') deskTradeSpot('sell');
+  else if (a === 'deskclose') deskClose(el.dataset.id);
+  else if (a === 'deskopt') { const par = (el.dataset.k || '').split(':'); if (par.length === 2) deskBuyOption(par[0], Number(par[1])); }
+  else if (a === 'deskoptexp') { DESK.opt.exp = el.dataset.v; render(); deskChain(); }
+  else if (a === 'deskrefresh') { DESK.msg = null; DESK.err = null; deskEnsure(true); }
   else if (a === 'close') closeOv();
   else if (a === 'reset') { document.getElementById('rstBox').innerHTML = `<p style="margin-bottom:10px">Se borran tus lecciones, XP e insignias de este navegador.</p><div class="row" style="gap:10px"><button class="btn ghost" data-act="rstNo" style="flex:1">Cancelar</button><button class="btn" data-act="rstYes" style="flex:1">Borrar</button></div>`; }
   else if (a === 'rstNo') render();
   else if (a === 'rstYes') { S = fresh(); save(); heroSm = null; render(); }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'dq') { DESK.qty = Math.max(0.0001, Number(e.target.value) || 0); const q = DESK.q[DESK.sym]; const t = document.getElementById('dTotal'); if (t) t.textContent = deskUsd(DESK.qty * (q?.price || 0)); }
   if (e.target.id === 'nm') { S.name = e.target.value.trim(); save(); }
   if (e.target.id === 'libq') { libQ = e.target.value; const l = document.getElementById('libList'); if (l) l.innerHTML = libListHTML(); }
 });
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
-window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (['inicio', 'aprende', 'perfil'].includes(t) && t !== tab) { tab = t; render(); } });
-{ const t = location.hash.slice(1); if (['inicio', 'aprende', 'perfil'].includes(t)) tab = t; }
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (['inicio', 'aprende', 'mesa', 'perfil'].includes(t) && t !== tab) { tab = t; render(); } });
+{ const t = location.hash.slice(1); if (['inicio', 'aprende', 'mesa', 'perfil'].includes(t)) tab = t; }
 render();
 window.addEventListener('velario:billing', event => applyBilling(event.detail));
 window.velarioBack = () => {

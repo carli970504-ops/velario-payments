@@ -1,5 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('velarioDesktop', { platform: process.platform, version: '1.1.0' });
+contextBridge.exposeInMainWorld('velarioMarket', {
+  quotes: symbols => ipcRenderer.invoke('market:quotes', symbols),
+  chart: (symbol, range, interval) => ipcRenderer.invoke('market:chart', symbol, range, interval)
+});
 contextBridge.exposeInMainWorld('velarioNative', {
   platform: 'windows',
   getStatus: () => ipcRenderer.invoke('billing:status'),

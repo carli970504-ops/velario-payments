@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
 const { createBilling } = require('./billing.cjs');
+const { registerMarket } = require('./market.cjs');
 const config = require('./billing.config.json');
 const localFile = path.join(__dirname, 'index.html');
 const localUrl = pathToFileURL(localFile).href;
@@ -54,6 +55,7 @@ app.whenReady().then(() => {
     return billing.purchase(method);
   });
   ipcMain.handle('billing:manage', event => { if (!trusted(event)) throw new Error('Origen no permitido.'); return billing.manage(); });
+  registerMarket(ipcMain, trusted);
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
