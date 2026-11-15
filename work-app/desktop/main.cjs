@@ -65,6 +65,11 @@ app.whenReady().then(() => {
     if (typeof session !== 'string' || session.length > 200) throw new Error('Compra no válida.');
     return billing.creditClaim(session);
   });
+  ipcMain.handle('billing:reward', (event, mode, amount) => {
+    if (!trusted(event)) throw new Error('Origen no permitido.');
+    if (typeof mode !== 'string' || !/^[a-z]{4,12}$/.test(mode)) throw new Error('Modo no válido.');
+    return billing.claimReward(mode, amount);
+  });
   registerMarket(ipcMain, trusted);
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

@@ -98,7 +98,16 @@ function createBilling({ baseUrl, readAccount, writeAccount, fetchImpl = fetch, 
     const user = await account();
     return call('/api/credits/claim', { method: 'POST', body: JSON.stringify({ session }), headers: { Authorization: `Bearer ${user.token}` } });
   }
-  return { getStatus, purchase, restore: getStatus, manage, creditCheckout, creditClaim };
+  // Recompensa del reto: el día y el alta los decide el servidor.
+  async function claimReward(mode, amount) {
+    if (!base) throw new Error('El servidor de recompensas no está disponible.');
+    if (!/^(cripto|acciones|etf|opciones)$/.test(String(mode))) throw new Error('Modo no válido.');
+    const value = Math.floor(Number(amount));
+    if (!Number.isFinite(value) || value < 0 || value > 15) throw new Error('Recompensa fuera de rango.');
+    const user = await account();
+    return call('/api/rewards/daily', { method: 'POST', body: JSON.stringify({ mode, amount: value }), headers: { Authorization: `Bearer ${user.token}` } });
+  }
+  return { getStatus, purchase, restore: getStatus, manage, creditCheckout, creditClaim, claimReward };
 }
 
 module.exports = { PRODUCT, apiBase, entitlement, checkoutUrl, createBilling };

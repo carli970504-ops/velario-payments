@@ -227,3 +227,23 @@ test('saldo: importe manipulado o proveedor sin configurar no acreditan nada',as
   assert.equal((await empty.request('/api/credits/checkout',s.token,{mode:'etf'})).status,503);
   assert.equal((await empty.request('/api/credits/claim',s.token,{session:'cs_x'})).status,503);
 });
+
+test('reto diario: el servidor decide el día y no repite la recompensa',async t=>{
+  const f=await fixture(t), session=(await f.request('/api/session',null,{})).body;
+  const first=await f.request('/api/rewards/daily',session.token,{mode:'cripto',amount:9});
+  assert.equal(first.status,200); assert.equal(first.body.credited,9); assert.equal(first.body.alreadyClaimed,false);
+  const again=await f.request('/api/rewards/daily',session.token,{mode:'etf',amount:15});
+  assert.equal(again.body.credited,0); assert.equal(again.body.alreadyClaimed,true);
+  assert.equal(again.body.day,first.body.day);
+  assert.equal(f.store.rewardFor(session.accountId,first.body.day).credits,9);
+  const other=(await f.request('/api/session',null,{})).body;
+  assert.equal((await f.request('/api/rewards/daily',other.token,{mode:'etf',amount:15})).body.credited,15);
+});
+
+test('reto diario: importes fuera de rango y modos inventados se rechazan',async t=>{
+  const f=await fixture(t), session=(await f.request('/api/session',null,{})).body;
+  assert.equal((await f.request('/api/rewards/daily',session.token,{mode:'cripto',amount:16})).status,400);
+  assert.equal((await f.request('/api/rewards/daily',session.token,{mode:'cripto',amount:-1})).status,400);
+  assert.equal((await f.request('/api/rewards/daily',session.token,{mode:'oro',amount:5})).status,400);
+  assert.equal(f.store.rewardFor(session.accountId,new Date().toISOString().slice(0,10)),null);
+});

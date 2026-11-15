@@ -56,13 +56,21 @@ function deskLoad() {
     }
   }
   base.pos = pos;
-  if (r.daily && typeof r.daily === 'object') base.daily = { date: String(r.daily.date || ''), played: r.daily.played === true, won: Number(r.daily.won) || 0 };
+  if (r.daily && typeof r.daily === 'object') base.daily = { date: String(r.daily.date || ''), played: r.daily.played === true, won: Number(r.daily.won) || 0, seen: Number(r.daily.seen) || 0, tampered: r.daily.tampered === true };
   return base;
 }
-function deskDayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function deskDayStr() { return new Date().toISOString().slice(0, 10); }
+// El día es UTC y coincide con el que usa el servidor. Además se guarda el reloj más
+// avanzado visto: si la hora del equipo retrocede, la recompensa se bloquea.
 function deskDaily() {
-  const today = deskDayStr();
-  if (!DT.daily || DT.daily.date !== today) DT.daily = { date: today, played: false, won: 0 };
+  const now = Date.now(), today = deskDayStr();
+  if (!DT.daily || typeof DT.daily !== 'object') DT.daily = { date: '', played: false, won: 0, seen: 0, tampered: false, saved: 0 };
+  const seen = Number(DT.daily.seen) || 0;
+  if (now + 600000 < seen) DT.daily.tampered = true;
+  else if (DT.daily.tampered && now >= seen) DT.daily.tampered = false;
+  DT.daily.seen = Math.max(seen, now);
+  if (!DT.daily.tampered && DT.daily.date !== today) { DT.daily.date = today; DT.daily.played = false; DT.daily.won = 0; }
+  if (now - (Number(DT.daily.saved) || 0) > 300000) { DT.daily.saved = now; deskPersist(); }
   return DT.daily;
 }
 function deskPersist() {
@@ -191,9 +199,9 @@ function deskProgress() {
       <div><small class="muted">Ganado operando</small><b class="mono" style="color:var(--${st.realized >= 0 ? 'up' : 'down'})">${st.realized >= 0 ? '+' : ''}${deskUsd(st.realized)}</b></div>
       <div><small class="muted">Ganado trabajando</small><b class="mono">${deskUsd(st.earned || 0)}</b></div>
       <div><small class="muted">Comprado</small><b class="mono">${deskUsd(st.bought || 0)}</b></div>
-      <div><small class="muted">Reto de hoy</small><b class="mono">${deskDaily().played ? (deskDaily().won ? deskUsd(deskDaily().won) : 'hecho') : 'pendiente'}</b></div>
+      <div><small class="muted">Reto de hoy</small><b class="mono">${deskDaily().tampered ? 'revisa la hora' : deskDaily().played ? (deskDaily().won ? deskUsd(deskDaily().won) : 'hecho') : 'pendiente'}</b></div>
     </div>
-    ${deskDaily().played ? '<button class="btn ghost block" disabled>Reto de hoy hecho · vuelve mañana</button>' : broke ? '<button class="btn block" data-act="dg-play">Trabajar para recuperar saldo</button>' : '<button class="btn ghost block" data-act="dg-play">Ganar saldo con un reto</button>'}
+    ${deskDaily().tampered ? '<button class="btn ghost block" disabled>Fecha del equipo alterada</button>' : deskDaily().played ? '<button class="btn ghost block" disabled>Reto de hoy hecho · vuelve mañana</button>' : broke ? '<button class="btn block" data-act="dg-play">Trabajar para recuperar saldo</button>' : '<button class="btn ghost block" data-act="dg-play">Ganar saldo con un reto</button>'}
   </div>`;
 }
 
@@ -510,6 +518,7 @@ function deskGameHTML() {
 function deskPlay() {
   if (DG.on) return;
   const daily = deskDaily();
+  if (daily.tampered) return deskSay('down', 'La fecha del equipo no cuadra con la última vez que jugaste. Corrige la hora y vuelve a intentarlo.');
   if (daily.played) return deskSay('down', 'El reto es una vez al día. Vuelve mañana.');
   daily.played = true; daily.won = 0; deskPersist();
   DG.on = true; DG.over = false;
@@ -576,20 +585,35 @@ function deskGameEnd() {
   </div></div>`;
   ov().scrollTop = 0;
 }
-function deskGameCollect() {
+async function deskServerReward(earn) {
+  const native = window.velarioNative;
+  if (!native?.claimReward) return null;
+  try {
+    const res = await native.claimReward(DESK.seg, earn);
+    return res && typeof res.credited === 'number' ? res : null;
+  } catch (error) { return null; }
+}
+async function deskGameCollect() {
   const earn = Math.min(DG_MAX, Math.round(DG.earn || 0));
   const seg = DG.seg;
-  if (earn > 0) {
-    deskAddCash(seg, earn);
-    DT.stats[seg].earned = Math.round(((DT.stats[seg].earned || 0) + earn) * 100) / 100;
+  // Si el servidor responde, manda él: un cambio de fecha no abre otra ronda.
+  const server = await deskServerReward(earn);
+  const credits = server ? Math.max(0, Math.min(DG_MAX, Math.round(Number(server.credited) || 0))) : earn;
+  if (credits > 0) {
+    deskAddCash(seg, credits);
+    DT.stats[seg].earned = Math.round(((DT.stats[seg].earned || 0) + credits) * 100) / 100;
     const daily = deskDaily();
-    daily.won = Math.round(((daily.won || 0) + earn) * 100) / 100;
+    daily.won = Math.round(((daily.won || 0) + credits) * 100) / 100;
+    daily.played = true;
     deskSample(seg, true);
     deskPersist();
   }
   DG.earn = 0;
   closeOv();
-  DESK.msg = { kind: earn > 0 ? 'up' : 'down', text: earn > 0 ? `Ganaste ${deskUsd(earn)} y se sumaron a ${DESK_SEGS[seg].label}.` : 'Esta vez no sumaste nada. Prueba otra ronda.' };
+  const text = credits > 0
+    ? `Ganaste ${deskUsd(credits)} y se sumaron a ${DESK_SEGS[seg].label}.`
+    : server?.alreadyClaimed ? 'El servidor ya registró la ronda de hoy.' : 'Esta vez no sumaste nada. Vuelve mañana.';
+  DESK.msg = { kind: credits > 0 ? 'up' : 'down', text };
   render();
 }
 

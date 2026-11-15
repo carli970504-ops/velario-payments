@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('velarioNative', {
   purchase: method => ipcRenderer.invoke('billing:purchase', method),
   manage: () => ipcRenderer.invoke('billing:manage'),
   topup: mode => ipcRenderer.invoke('billing:credit-checkout', mode),
-  claimTopup: session => ipcRenderer.invoke('billing:credit-claim', session)
+  claimTopup: session => ipcRenderer.invoke('billing:credit-claim', session),
+  claimReward: (mode, amount) => ipcRenderer.invoke('billing:reward', mode, amount)
 });

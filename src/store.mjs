@@ -16,7 +16,9 @@ export class Store {
         PRIMARY KEY(provider, reference));
       CREATE TABLE IF NOT EXISTS events (provider TEXT NOT NULL, id TEXT NOT NULL, received INTEGER NOT NULL, PRIMARY KEY(provider,id));
       CREATE TABLE IF NOT EXISTS credits (session TEXT PRIMARY KEY, account_id TEXT NOT NULL, mode TEXT NOT NULL,
-        credits INTEGER NOT NULL, credited_at INTEGER NOT NULL);`);
+        credits INTEGER NOT NULL, credited_at INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS rewards (account_id TEXT NOT NULL, day TEXT NOT NULL, mode TEXT NOT NULL,
+        credits REAL NOT NULL, created INTEGER NOT NULL, PRIMARY KEY(account_id, day));`);
   }
   session() {
     const accountId = randomUUID(), token = randomBytes(32).toString('base64url');
@@ -56,6 +58,12 @@ export class Store {
   }
   creditFor(session) { return this.db.prepare('SELECT * FROM credits WHERE session=?').get(session) || null; }
   creditsOf(account) { return this.db.prepare('SELECT * FROM credits WHERE account_id=? ORDER BY credited_at DESC').all(account); }
+  // Recompensa del reto: una por cuenta y dia (clave primaria).
+  rewardClaim(account, day, mode, credits) {
+    const result = this.db.prepare('INSERT OR IGNORE INTO rewards VALUES (?,?,?,?,?)').run(account, day, mode, credits, Date.now());
+    return Number(result.changes) === 1;
+  }
+  rewardFor(account, day) { return this.db.prepare('SELECT * FROM rewards WHERE account_id=? AND day=?').get(account, day) || null; }
   seen(provider, id) { return Boolean(this.db.prepare('SELECT id FROM events WHERE provider=? AND id=?').get(provider,id)); }
   event(provider, id) { this.db.prepare('INSERT OR IGNORE INTO events VALUES(?,?,?)').run(provider,id,Date.now()); }
   close() { this.db.close(); }

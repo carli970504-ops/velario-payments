@@ -168,6 +168,20 @@ export function createApp({ config, store, providers, log = console, accounts = 
           return entitlement(account);
         }));
       }
+      if(req.method==='POST' && url.pathname==='/api/rewards/daily') {
+        const input=parse(await body(req));
+        if(!CREDIT.modes.includes(input.mode)) throw new PaymentError('Modo no válido.',400);
+        const amount=Math.floor(Number(input.amount));
+        if(!Number.isFinite(amount) || amount<0 || amount>15) throw new PaymentError('Recompensa fuera de rango.',400);
+        rate(`reward:${account}`,6);
+        // El dia lo decide el servidor: cambiar la hora del equipo no abre otra ronda.
+        const day=new Date().toISOString().slice(0,10);
+        return json(res,200,await locked(account,async()=>{
+          const created=store.rewardClaim(account,day,input.mode,amount);
+          const row=store.rewardFor(account,day);
+          return {day,credited:created?amount:0,alreadyClaimed:!created,mode:row?.mode || input.mode};
+        }));
+      }
       if(req.method==='POST' && url.pathname==='/api/credits/checkout') {
         const input=parse(await body(req));
         if(!CREDIT.modes.includes(input.mode)) throw new PaymentError('Modo no válido.',400);
