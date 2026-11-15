@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/Rn18uLLFwrheEYNU/OZseT6SZ836wZMFrZxtLWRn5A='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1KpFORAgJKGlr8BHNi8kINMCh0oinZTaY2i7zDPPjb8='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Velario</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -254,6 +254,12 @@ ul.look{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap
   .desk-row .dp{font-size:13px}
   .pct{min-width:60px}
 }
+
+.desk-chartwrap{position:relative}
+.desk-warn{position:absolute;left:8px;right:8px;top:8px;z-index:2;display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border-radius:12px;border:1px solid var(--accent);background:var(--surface);color:var(--ink);font:600 12px/1.35 var(--f-body);box-shadow:0 8px 22px rgba(0,0,0,.18);pointer-events:none;animation:deskWarn 8s ease forwards}
+.desk-warn svg.ic{width:16px;height:16px;flex:none;margin-top:1px;color:var(--accent-fg)}
+.desk-warn b{color:var(--accent-fg)}
+@keyframes deskWarn{0%,74%{opacity:1}100%{opacity:0;visibility:hidden}}
 </style>
 </head><body>
 <div class="wrap"><main id="view"></main></div>
@@ -1761,8 +1767,11 @@ function deskChartBox() {
   if (DESK.chartErr) return `<div class="desk-empty">${esc(DESK.chartErr)}</div>`;
   if (!DESK.chart || DESK.chartSym !== DESK.sym || DESK.chartTf !== DESK.tf) return '<div class="desk-empty">Cargando gráfica…</div>';
   const cs = DESK.chart.candles.map(c => ({ o: c.o, c: c.c, h: c.h, l: c.l }));
-  const dec = DESK.chart.price >= 1000 ? 2 : 2;
-  return chart({ c: cs, after: [], dec, lines: [], showHl: false }, false, 236);
+  const dec = 2;
+  const key = DESK.sym + '|' + DESK.tf;
+  const warn = DESK.warnKey === key ? '' : `<div class="desk-warn">${ic('alert')}<span>Datos con <b>5 min de retraso</b>. No sirve para decidir operaciones reales.</span></div>`;
+  if (warn) DESK.warnKey = key;
+  return `<div class="desk-chartwrap">${warn}${chart({ c: cs, after: [], dec, lines: [], showHl: false }, false, 236)}</div>`;
 }
 function deskDetail() {
   const q = DESK.q[DESK.sym];

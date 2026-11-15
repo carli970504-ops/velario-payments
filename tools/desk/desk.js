@@ -258,8 +258,11 @@ function deskChartBox() {
   if (DESK.chartErr) return `<div class="desk-empty">${esc(DESK.chartErr)}</div>`;
   if (!DESK.chart || DESK.chartSym !== DESK.sym || DESK.chartTf !== DESK.tf) return '<div class="desk-empty">Cargando gráfica…</div>';
   const cs = DESK.chart.candles.map(c => ({ o: c.o, c: c.c, h: c.h, l: c.l }));
-  const dec = DESK.chart.price >= 1000 ? 2 : 2;
-  return chart({ c: cs, after: [], dec, lines: [], showHl: false }, false, 236);
+  const dec = 2;
+  const key = DESK.sym + '|' + DESK.tf;
+  const warn = DESK.warnKey === key ? '' : `<div class="desk-warn">${ic('alert')}<span>Datos con <b>5 min de retraso</b>. No sirve para decidir operaciones reales.</span></div>`;
+  if (warn) DESK.warnKey = key;
+  return `<div class="desk-chartwrap">${warn}${chart({ c: cs, after: [], dec, lines: [], showHl: false }, false, 236)}</div>`;
 }
 function deskDetail() {
   const q = DESK.q[DESK.sym];
