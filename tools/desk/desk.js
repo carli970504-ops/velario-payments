@@ -382,14 +382,14 @@ function deskPositions() {
 }
 function viewMesa() {
   if (!deskBridge()) {
-    return `<div class="stack"><h1>Astra Desk</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
+    return `<div class="stack"><h1 style="font-size:23px;line-height:1.2">Centro de Operaciones</h1><div class="card"><h3>Disponible en la app de escritorio</h3><p class="muted">La Mesa pide los precios a Yahoo Finance desde la app instalada. Abre Velario Pro para operar.</p></div></div>`;
   }
   const seg = `<div class="seg desk4">${Object.entries(DESK_SEGS).map(([k, v]) => `<button data-act="deskseg" data-v="${k}" aria-pressed="${DESK.seg === k}">${v.label}</button>`).join('')}</div>`;
   const msg = DESK.msg ? `<div class="card msg"><p style="margin:0;font-size:14px;color:var(--${DESK.msg.kind === 'up' ? 'up' : 'down'})">${esc(DESK.msg.text)}</p></div>` : '';
   const err = DESK.err ? `<div class="card"><p class="muted" style="margin:0 0 10px">${esc(DESK.err)}</p><button class="btn ghost" data-act="deskrefresh">Reintentar</button></div>` : '';
   const list = `<div class="card desk-list">${DESK_SEGS[DESK.seg].items.map(([s, l]) => deskRow(s, l, s === DESK.sym)).join('')}</div>`;
   return `<div class="stack">
-    <div class="top" style="margin-bottom:0"><div><h1>Astra Desk</h1><p class="muted sub">Precios reales · operaciones simuladas</p></div>
+    <div class="top" style="margin-bottom:0"><div><h1 style="font-size:23px;line-height:1.2">Centro de Operaciones</h1><p class="muted sub">Precios reales · operaciones simuladas</p></div>
       <div class="stats-mini"><span class="row" style="gap:6px"><span class="mono cash-mini">${deskUsd(deskCashNow())}</span></span><span class="pill mono">${deskUsd(deskEquity(DESK.seg))}</span></div></div>
     ${seg}${msg}${err}${list}${DESK.seg === 'opciones' ? deskOptions() : deskDetail()}${deskPositions()}${deskProgress()}
     <p class="note">Datos de Yahoo Finance. Todo se ejecuta en simulado: nada de esto es dinero real ni asesoría financiera.</p></div>`;
