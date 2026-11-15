@@ -21,7 +21,7 @@ let DT = deskLoad();
 function deskBlank() {
   const cash = {}, stats = {}, hist = {};
   for (const m of DESK_MODES) { cash[m] = DESK_START; stats[m] = { trades: 0, wins: 0, realized: 0, earned: 0, bought: 0 }; hist[m] = []; }
-  return { v: 2, cash, stats, hist, pos: {} };
+  return { v: 2, cash, stats, hist, pos: {}, daily: { date: '', played: false, won: 0 } };
 }
 function deskSegOf(p) {
   if (p.kind === 'opt') return 'opciones';
@@ -56,7 +56,14 @@ function deskLoad() {
     }
   }
   base.pos = pos;
+  if (r.daily && typeof r.daily === 'object') base.daily = { date: String(r.daily.date || ''), played: r.daily.played === true, won: Number(r.daily.won) || 0 };
   return base;
+}
+function deskDayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function deskDaily() {
+  const today = deskDayStr();
+  if (!DT.daily || DT.daily.date !== today) DT.daily = { date: today, played: false, won: 0 };
+  return DT.daily;
 }
 function deskPersist() {
   try { localStorage.setItem(DESK_KEY, JSON.stringify(DT)); } catch (e) { }
@@ -184,8 +191,9 @@ function deskProgress() {
       <div><small class="muted">Ganado operando</small><b class="mono" style="color:var(--${st.realized >= 0 ? 'up' : 'down'})">${st.realized >= 0 ? '+' : ''}${deskUsd(st.realized)}</b></div>
       <div><small class="muted">Ganado trabajando</small><b class="mono">${deskUsd(st.earned || 0)}</b></div>
       <div><small class="muted">Comprado</small><b class="mono">${deskUsd(st.bought || 0)}</b></div>
+      <div><small class="muted">Reto de hoy</small><b class="mono">${deskDaily().played ? (deskDaily().won ? deskUsd(deskDaily().won) : 'hecho') : 'pendiente'}</b></div>
     </div>
-    ${broke ? '<button class="btn block" data-act="dg-play">Trabajar para recuperar saldo</button>' : '<button class="btn ghost block" data-act="dg-play">Ganar saldo con un reto</button>'}
+    ${deskDaily().played ? '<button class="btn ghost block" disabled>Reto de hoy hecho · vuelve mañana</button>' : broke ? '<button class="btn block" data-act="dg-play">Trabajar para recuperar saldo</button>' : '<button class="btn ghost block" data-act="dg-play">Ganar saldo con un reto</button>'}
   </div>`;
 }
 
@@ -460,7 +468,7 @@ function viewMesa() {
 
 /* ===== Pulso del mercado: reto para ganar saldo ===== */
 const DG = { on: false, timer: null, prices: [], score: 0, combo: 0, hits: 0, fails: 0, left: 0, seg: 'cripto', earn: 0, over: false };
-const DG_SECONDS = 30, DG_MAX = 250, DG_POINTS = 46;
+const DG_SECONDS = 30, DG_MAX = 15, DG_POINTS = 46;
 
 function deskGameSVG() {
   const W = 320, H = 172, pad = 8;
@@ -496,11 +504,14 @@ function deskGameHTML() {
       </div>
     </div>
     <div class="row" style="gap:10px"><button class="btn" data-act="dg-buy" style="flex:1">Comprar</button><button class="btn ghost" data-act="dg-sell" style="flex:1">Vender</button></div>
-    <p class="note" style="margin:0">Cada acierto paga 15 dólares más el combo. Al acabar cobras lo que juntes (máximo ${deskUsd(DG_MAX)} por ronda).</p>
+    <p class="note" style="margin:0">Cada acierto suma 1 dólar. Máximo ${deskUsd(DG_MAX)} al día y una sola ronda.</p>
   </div></div>`;
 }
 function deskPlay() {
   if (DG.on) return;
+  const daily = deskDaily();
+  if (daily.played) return deskSay('down', 'El reto es una vez al día. Vuelve mañana.');
+  daily.played = true; daily.won = 0; deskPersist();
   DG.on = true; DG.over = false;
   DG.prices = []; DG.score = 0; DG.combo = 0; DG.hits = 0; DG.fails = 0; DG.earn = 0;
   DG.left = DG_SECONDS; DG.seg = DESK.seg;
@@ -536,10 +547,9 @@ function deskGamePress(side) {
   const good = side === 'buy' ? pos <= 0.34 : pos >= 0.66;
   if (good) {
     DG.hits++; DG.combo++;
-    DG.score = Math.min(DG_MAX, DG.score + 15 + Math.min(6, DG.combo) * 3);
+    DG.score = Math.min(DG_MAX, DG.score + 1);
   } else {
     DG.combo = 0; DG.fails++;
-    DG.score = Math.max(0, DG.score - 5);
   }
   const hits = document.getElementById('dgHits'), combo = document.getElementById('dgCombo'), score = document.getElementById('dgScore'), box = document.getElementById('dgChart');
   if (hits) hits.textContent = DG.hits;
@@ -559,7 +569,7 @@ function deskGameEnd() {
   ov().innerHTML = `<div class="ov"><div class="ovtop"><button class="x" data-act="dg-quit" aria-label="Cerrar">${ic('x')}</button><span class="eyebrow">Reto terminado</span></div>
   <div class="stack" style="gap:12px">
     <div class="big">${deskUsd(DG.earn)}</div>
-    <p class="muted">${DG.hits} aciertos y ${DG.fails} fallos en ${DG_SECONDS} segundos.</p>
+    <p class="muted">${DG.hits} aciertos y ${DG.fails} fallos en ${DG_SECONDS} segundos. El reto vuelve mañana.</p>
     <div class="card row between"><span class="row">${ic('bolt')} Se suma a ${DESK_SEGS[DG.seg].label}</span><b class="mono">${deskUsd(DG.earn)}</b></div>
     <button class="btn block" data-act="dg-collect">Cobrar y volver</button>
     <button class="btn ghost block" data-act="dg-play">Otra ronda</button>
@@ -572,6 +582,8 @@ function deskGameCollect() {
   if (earn > 0) {
     deskAddCash(seg, earn);
     DT.stats[seg].earned = Math.round(((DT.stats[seg].earned || 0) + earn) * 100) / 100;
+    const daily = deskDaily();
+    daily.won = Math.round(((daily.won || 0) + earn) * 100) / 100;
     deskSample(seg, true);
     deskPersist();
   }
