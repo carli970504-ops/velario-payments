@@ -1,0 +1,24 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { createBilling } = require('./desktop/billing.cjs');
+const cfg = require('./desktop/billing.config.json');
+const DIR = path.join(os.tmpdir(), 'velario-buy');
+fs.mkdirSync(DIR, { recursive: true });
+const FILE = path.join(DIR, 'account.json');
+const readAccount = async () => { try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
+const writeAccount = async v => fs.writeFileSync(FILE, JSON.stringify(v));
+let abierto = null;
+const billing = createBilling({ baseUrl: cfg.apiBaseUrl, readAccount, writeAccount, openExternal: async u => { abierto = u; } });
+(async () => {
+  console.log('servidor:', cfg.apiBaseUrl);
+  console.log('archivo de cuenta:', FILE);
+  const antes = await billing.getStatus();
+  console.log('ANTES:', JSON.stringify(antes));
+  const r = await billing.purchase('card');
+  console.log('MENSAJE:', r.message);
+  console.log('URL:', abierto);
+  fs.writeFileSync(path.join(DIR, 'url.txt'), abierto || '');
+  const acc = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+  console.log('CUENTA:', acc.accountId, '| token', acc.token.length, 'chars');
+})().catch(e => { console.error('ERROR:', e.message); process.exit(1); });

@@ -1,0 +1,7 @@
+{
+  "name": "velario",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Velario — aprendizaje visual de patrones de velas",
+  "main": "desktop/main.cjs"
+}

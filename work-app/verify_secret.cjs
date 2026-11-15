@@ -1,0 +1,24 @@
+const fs=require('fs'),path=require('path'),crypto=require('crypto'),{execFileSync}=require('child_process');
+const DIR=path.join(process.env.APPDATA,'velario'),BIN=path.join(DIR,'purchase-account.bin'),TMP=require('os').tmpdir();
+const state=JSON.parse(fs.readFileSync(path.join(DIR,'Local State'),'utf8'));
+const raw=Buffer.from(state.os_crypt.encrypted_key,'base64').slice(5);
+fs.writeFileSync(path.join(TMP,'k.bin'),raw);
+execFileSync('powershell',['-NoProfile','-Command',`Add-Type -AssemblyName System.Security; $b=[IO.File]::ReadAllBytes('${path.join(TMP,'k.bin')}'); $d=[Security.Cryptography.ProtectedData]::Unprotect($b,$null,'CurrentUser'); [IO.File]::WriteAllBytes('${path.join(TMP,'k2.bin')}',$d)`]);
+const key=fs.readFileSync(path.join(TMP,'k2.bin'));
+const data=fs.readFileSync(BIN);
+const d=crypto.createDecipheriv('aes-256-gcm',key,data.slice(3,15));
+d.setAuthTag(data.slice(data.length-16));
+const acc=JSON.parse(Buffer.concat([d.update(data.slice(15,data.length-16)),d.final()]).toString('utf8'));
+const env=fs.readFileSync(path.join(__dirname,'..','.env'),'utf8');
+const get=k=>{const m=env.match(new RegExp('^'+k+'=(.*)$','m'));return m?(m[1].trim().replace(/^["']|["']$/g,'')||''):''};
+const sk=get('STRIPE_SECRET_KEY'), envAcc=get('ACCOUNT_SECRET');
+const derivada=crypto.createHmac('sha256',sk).update('velario/account-token/v1').digest('hex');
+const firma=s=>crypto.createHmac('sha256',s).update('velario/account/'+acc.accountId).digest('base64url');
+const parts=(acc.token||'').split('.');
+console.log('token de la app: 3 partes =', parts.length===3, '| prefijo', parts[0], '| cuenta', acc.accountId);
+const okDeriv=parts.length===3 && parts[2]===firma(derivada);
+const okEnv=parts.length===3 && parts[2]===firma(envAcc);
+console.log('firma = derivada de la clave Stripe local :', okDeriv);
+console.log('firma = ACCOUNT_SECRET del archivo .env   :', okEnv);
+if(okDeriv){ fs.writeFileSync(path.join(TMP,'accsecret'),derivada); console.log('>>> guardado en temp para pegarlo en Render'); }
+else console.log('>>> NO coincides: no se guarda nada');

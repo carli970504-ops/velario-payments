@@ -1,0 +1,1516 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TImmfRFPU/Y+sklmzwhDi5jzLJZ0sOEnMopUKHmLPFA='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Velario</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: app móvil de una columna, gráfica como protagonista, barra de pestañas inferior.
+   Paleta: pizarra azulada + ámbar. Tipos: Bricolage Grotesque (títulos), IBM Plex Sans (texto), IBM Plex Mono (precios). */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface2:#e5eaf3; --ink:#141c2b; --muted:#566379; --line:#d3dbe8;
+  --accent:#f0a421; --accent-ink:#1c1204; --accent-fg:#9a5b00;
+  --up:#0f8f68; --down:#d03b55; --badge:#16233a; --badge-ink:#f3f6fb; --chart:#f8fafd; --hl:rgba(240,164,33,.20); --lock:#aab4c6;
+  --f-display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1420; --surface:#151e2e; --surface2:#1d2840; --ink:#e9eef7; --muted:#93a1ba; --line:#26324b;
+  --accent:#f6b63f; --accent-ink:#1c1204; --accent-fg:#f6b63f; --up:#3dd0a0; --down:#ff6f85; --badge:#26365a; --badge-ink:#f3f6fb; --chart:#101a2a; --hl:rgba(246,182,63,.18); --lock:#4a5876; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1420; --surface:#151e2e; --surface2:#1d2840; --ink:#e9eef7; --muted:#93a1ba; --line:#26324b;
+  --accent:#f6b63f; --accent-ink:#1c1204; --accent-fg:#f6b63f; --up:#3dd0a0; --down:#ff6f85; --badge:#26365a; --badge-ink:#f3f6fb; --chart:#101a2a; --hl:rgba(246,182,63,.18); --lock:#4a5876; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body);
+  padding-block:16px 104px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent}
+.wrap{max-width:520px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:30px;line-height:1.1;font-weight:800}
+h2{font-size:20px;font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.eyebrow{font:600 11px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;align-items:center;gap:12px}
+.between{justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;min-width:0}
+.card.tap{width:100%;text-align:left;display:flex;align-items:center;gap:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:14px 22px;font-weight:600;background:var(--accent);color:var(--accent-ink)}
+.btn.block{width:100%}
+.btn.ghost{background:var(--surface2);color:var(--ink)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.billing-message{min-height:1.5em}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:var(--surface2);font-size:13px;font-weight:600}
+.pill.up{color:var(--up)} .pill.dn{color:var(--down)}
+.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* cabecera */
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}
+.top .sub{margin-top:4px}
+.stats-mini{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-weight:600;font-size:14px}
+.bar{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden;width:100%}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px}
+/* gráfica */
+.chart{width:100%;height:auto;display:block;background:var(--chart);border-radius:16px;border:1px solid var(--line)}
+.chart .g{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}
+.chart .t{fill:var(--muted);font:400 10px var(--f-mono)}
+.chart .hl{fill:var(--hl)}
+.chart .ln{stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.chart .lt{fill:var(--accent-fg);font:600 9.5px var(--f-body)}
+.chart .up{stroke:var(--up);fill:var(--up)} .chart .dn{stroke:var(--down);fill:var(--down)}
+.chart .nw{animation:rise .5s both}
+@keyframes rise{from{opacity:0}to{opacity:1}}
+.chartbox{position:relative}
+.tag{position:absolute;left:10px;top:10px;font:500 11px var(--f-mono);background:color-mix(in srgb,var(--surface) 85%,transparent);border:1px solid var(--line);padding:3px 8px;border-radius:999px}
+.hero-chart .chart{border-radius:18px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pair .card{display:flex;flex-direction:column;gap:6px;text-align:left}
+/* progreso */
+.ring{display:flex;gap:18px;align-items:center}
+.ring svg{width:112px;height:112px;flex:none}
+.ring .num{font:800 26px var(--f-display);fill:var(--ink)}
+.kv{display:flex;flex-direction:column;gap:12px;flex:1;min-width:0}
+.kv b{font:700 24px var(--f-display)}
+.kv small{color:var(--muted);font-size:14px}
+/* ruta */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:12px;font-weight:600;display:flex;gap:8px;align-items:center;justify-content:center}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.week{display:flex;gap:6px}
+.week i{flex:1;height:6px;border-radius:99px;background:var(--surface2)} .week i.on{background:var(--accent)}
+.sec{margin-top:24px}
+.secbar{display:flex;gap:4px;margin-top:10px;align-items:center}
+.secbar i{flex:1;height:5px;border-radius:99px;background:var(--surface2)} .secbar i.on{background:var(--accent)}
+.secbar span{font:500 13px var(--f-mono);color:var(--muted);margin-left:8px}
+.path{display:flex;flex-direction:column;align-items:center;padding:8px 0}
+.node{display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;padding:14px 0;width:200px;position:relative;transform:translateX(var(--dx,0))}
+.node:not(:last-child)::after{content:"";position:absolute;top:100%;left:50%;height:12px;border-left:2px dotted var(--line)}
+.dot{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);background:var(--surface2);color:var(--lock)}
+.node.done .dot{background:var(--up);border-color:var(--up);color:var(--bg)}
+.node.now .dot{background:var(--ink);border-color:var(--accent);box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 30%,transparent);color:var(--bg)}
+.node.lock{cursor:default}
+.node .lbl{font:600 14px/1.25 var(--f-body);text-align:center;color:var(--ink)}
+.node.lock .lbl{color:var(--muted)}
+.here{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.dot svg.glyph{width:46px;height:46px}
+.dot .ic{width:34px;height:34px}
+/* biblioteca */
+.chips{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:16px;padding:0 14px;color:var(--muted)}
+.search input[type=search]{flex:1;min-width:0;border:0;border-radius:0;background:none;color:var(--ink);font:inherit;padding:13px 0;outline:none}
+.search:focus-within{box-shadow:0 0 0 2px var(--accent)}
+.prow{display:flex;align-items:center;gap:14px;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 14px}
+.prow .gl{width:76px;height:64px;border-radius:14px;display:grid;place-items:center;flex:none;background:var(--surface2)}
+.prow .gl.up{background:color-mix(in srgb,var(--up) 12%,var(--surface))}
+.prow .gl.down{background:color-mix(in srgb,var(--down) 12%,var(--surface))}
+.pm{flex:1;min-width:0}
+.pm .eb{font:600 11px/1.3 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+.eb.up{color:var(--up)} .eb.down{color:var(--down)} .eb.neutral{color:var(--muted)}
+.pm h3{margin:3px 0 2px}
+.pm p{color:var(--muted);font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pm .dots{margin-top:7px}
+.dots{display:flex;gap:4px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--surface2)} .dots i.on{background:var(--accent)}
+/* perfil */
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.badge{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:12px;color:var(--muted)}
+.badge svg{width:72px;height:72px}
+.bshape{fill:var(--badge);stroke:var(--accent);stroke-width:3} .bshape.lk{fill:var(--surface2);stroke:var(--lock)}
+.binner{fill:none;stroke:var(--accent);stroke-opacity:.35;stroke-width:1}
+.bic{color:var(--accent)} .bic.lk{color:var(--lock)}
+.bnum{font:800 21px var(--f-display);fill:var(--badge-ink)} .bnum.lk{fill:var(--lock)}
+.bsub{font:600 4.8px var(--f-body);letter-spacing:.06em;fill:var(--accent)} .bsub.lk{fill:var(--lock)}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px 16px}
+.bgrid .badge{gap:8px} .bgrid .badge svg{width:96px;height:96px}
+.bgrid .bn{font:700 17px var(--f-display);color:var(--ink)}
+.bgrid .how{font-size:12px;line-height:1.35;color:var(--muted)}
+.badge b{color:var(--ink);font-size:13px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.stat b{font:800 26px var(--f-display)}
+.map{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.map i{aspect-ratio:1;border-radius:7px;background:var(--surface2)}
+.map i.l1{background:color-mix(in srgb,var(--accent) 35%,var(--surface2))}
+.map i.l2{background:color-mix(in srgb,var(--accent) 70%,var(--surface2))}
+.map i.l3{background:var(--accent)}
+input[type=text],input[type=search]{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;font:inherit}
+/* pestañas */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:10px max(16px,env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px))}
+.tabs nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.14)}
+.tabs button{border:0;background:none;border-radius:999px;padding:12px 18px;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--muted)}
+.tabs button[aria-current="page"]{background:var(--ink);color:var(--bg)}
+/* overlay */
+#overlay{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;padding-block:calc(14px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ov{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.ovtop{display:flex;align-items:center;gap:12px}
+.x{border:0;background:var(--surface2);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none}
+.prog{display:flex;gap:5px;flex:1}
+.prog i{flex:1;height:6px;border-radius:99px;background:var(--surface2)} .prog i.on{background:var(--accent)} .prog i.bad{background:var(--down)}
+.q{font:800 24px/1.15 var(--f-display)}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:center;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:14px;font-weight:600}
+.opt:disabled{cursor:default}
+.opt .k{width:26px;height:26px;border-radius:8px;background:var(--surface2);display:grid;place-items:center;font:600 13px var(--f-mono);flex:none}
+.opt.right{border-color:var(--up);background:color-mix(in srgb,var(--up) 14%,var(--surface))}
+.opt.wrong{border-color:var(--down);background:color-mix(in srgb,var(--down) 14%,var(--surface))}
+.res{font:800 26px/1.1 var(--f-display)}
+.res.ok{color:var(--up)} .res.no{color:var(--down)}
+.key{background:var(--surface2);border-radius:16px;padding:14px}
+.key b{display:block;color:var(--accent-fg);font-size:13px;margin-bottom:4px}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{font-weight:600;cursor:pointer}
+ul.look{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.big{font:800 54px/1 var(--f-display)}
+.note{font-size:12.5px;color:var(--muted)}
+.warn{background:color-mix(in srgb,var(--accent) 14%,var(--surface));border-radius:16px;padding:14px}
+.warn b{display:flex;gap:8px;align-items:center;color:var(--accent-fg);font-size:14px;margin-bottom:4px}
+.rel{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+.relc{flex:none;display:flex;align-items:center;gap:10px;background:var(--surface2);border:0;border-radius:18px;padding:10px 14px;font-weight:600;text-align:left}
+.exgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exgrid .tag{left:6px;top:6px;font-size:10px}
+.dirs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dirb{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 10px;border-radius:20px;border:0;font-weight:700;font-size:17px}
+.dirb .ic{width:30px;height:30px}
+.dirb.u{background:color-mix(in srgb,var(--up) 15%,var(--surface));color:var(--up)}
+.dirb.d{background:color-mix(in srgb,var(--down) 15%,var(--surface));color:var(--down)}
+.dirb.right{box-shadow:0 0 0 2.5px var(--up)} .dirb.wrong{box-shadow:0 0 0 2.5px var(--down)}
+.dirb:disabled:not(.right):not(.wrong){opacity:.45}
+.link{border:0;background:none;color:var(--muted);padding:10px;font-weight:500;align-self:center}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.chart .nw{animation:none}}
+
+
+/* --- presupuesto: canon, billetes y ladron --- */
+.cash-pill{color:var(--up);border-color:var(--line)}
+.cash-mini{color:var(--up);font-weight:600}
+.fx{position:fixed;inset:0;pointer-events:none;z-index:70}
+.cannon{position:absolute;left:16px;bottom:84px;width:62px;height:46px}
+.cannon .barrel{position:absolute;left:2px;bottom:14px;width:48px;height:16px;border-radius:9px;background:linear-gradient(180deg,#4a5568,#141c2b);transform:rotate(-26deg)}
+.cannon .wheel{position:absolute;left:8px;bottom:0;width:20px;height:20px;border-radius:50%;background:#141c2b;border:3px solid var(--accent)}
+.cannon .boom{position:absolute;left:48px;top:-6px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,#ffe08a 0%,rgba(255,224,138,0) 70%);animation:boom .4s ease-out forwards}
+.bill{position:absolute;font-size:26px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25));animation:fly 1.15s cubic-bezier(.2,.6,.4,1) forwards}
+.billup{position:absolute;transform:translate(-50%,-50%);font-weight:800;color:var(--up);font-size:22px;animation:billup 1.2s ease-out forwards}
+.thief{position:absolute;right:-90px;bottom:82px;font-size:44px;animation:steal 1.7s ease-in forwards}
+.loss{position:absolute;right:26px;bottom:134px;font-weight:800;color:var(--down);font-size:20px;animation:billup2 1.5s ease-out forwards}
+.cartel{position:absolute;left:50%;top:15%;transform:translate(-50%,-160%);background:linear-gradient(180deg,#ff6b6b,#d03b55);color:#fff;padding:14px 18px;border-radius:14px;font-weight:800;font-size:14px;line-height:1.25;letter-spacing:.6px;text-align:center;max-width:86vw;box-shadow:0 14px 34px rgba(0,0,0,.35);animation:cartel 2.8s ease forwards}
+@keyframes boom{from{transform:scale(.3);opacity:.9}to{transform:scale(2.4);opacity:0}}
+@keyframes fly{0%{opacity:1;transform:translate(0,0) rotate(0)}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+@keyframes billup{0%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(-50%,-140%)}}
+@keyframes billup2{0%{opacity:1}100%{opacity:0;transform:translateY(-46px)}}
+@keyframes steal{0%{right:-90px;opacity:0}18%{right:22px;opacity:1}72%{right:22px;opacity:1}100%{right:-100px;opacity:0}}
+@keyframes cartel{0%{transform:translate(-50%,-160%)}12%{transform:translate(-50%,0) rotate(-2deg)}20%{transform:translate(-50%,0) rotate(2deg)}26%{transform:translate(-50%,0)}80%{transform:translate(-50%,0)}100%{transform:translate(-50%,-170%)}}
+.fx.quiet *{animation:none!important}
+.fx.quiet .cartel{transform:translate(-50%,0)}
+.fx.quiet .thief{right:22px;opacity:1}
+</style>
+</head><body>
+<div class="wrap"><main id="view"></main></div>
+<div class="tabs"><nav aria-label="Secciones">
+  <button data-tab="inicio"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>Inicio</button>
+  <button data-tab="aprende"><svg class="ic" viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2zM12 6v14"/></svg>Aprende</button>
+  <button data-tab="perfil"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Perfil</button>
+</nav></div>
+<div id="overlay" hidden></div>
+<script>
+/* ===== Velario · lógica de patrones (datos simulados) ===== */
+const rnd = () => Math.random();
+const U = (a, b) => a + rnd() * (b - a);
+const pickOne = a => a[Math.floor(rnd() * a.length)];
+const mk = (o, c, up, lo) => ({ o, c, h: Math.max(o, c) + up, l: Math.min(o, c) - lo });
+const bd = x => Math.abs(x.c - x.o), tp = x => Math.max(x.o, x.c), bt = x => Math.min(x.o, x.c);
+const rg = x => x.h - x.l, uw = x => x.h - tp(x), lw = x => bt(x) - x.l, isUp = x => x.c > x.o, isDn = x => x.c < x.o;
+const mid = x => (x.o + x.c) / 2;
+
+/* Tendencia previa: cierres con deriva fija y ruido acotado, así la tendencia es siempre inequívoca. */
+function trendCandles(n, dir) {
+  const s = dir === 'down' ? -1 : 1, out = [];
+  let prev = null;
+  for (let i = 0; i < n; i++) {
+    const c = s * 0.32 * (i + 1) + U(-0.3, 0.3);
+    const o = prev === null ? c - s * 0.32 : prev;
+    out.push(mk(o, c, U(0.06, 0.36), U(0.06, 0.36)));
+    prev = c;
+  }
+  return out;
+}
+/* Lee la tendencia con los 8 cierres anteriores a la posición s */
+function ctxT(cs, s) { const d = cs[s - 1].c - cs[s - 9].c; return d > 1.5 ? 'up' : d < -1.5 ? 'down' : 'flat'; }
+
+/* ---------- Generadores de figuras (muchas velas) ---------- */
+function route(N, nodes, noise) {
+  const idx = nodes.map(n => Math.round(n[0] * (N - 1)));
+  const out = [];
+  for (let i = 0; i < N; i++) {
+    let k = 0; while (k < nodes.length - 2 && i > idx[k + 1]) k++;
+    const a = idx[k], b = idx[k + 1], t = b === a ? 0 : (i - a) / (b - a);
+    let v = nodes[k][1] + (nodes[k + 1][1] - nodes[k][1]) * t;
+    if (!idx.includes(i)) { const nz = nodes[k + 1][2] !== undefined ? nodes[k + 1][2] : noise; v += U(-nz, nz); }
+    out.push(v);
+  }
+  return { closes: out, idx };
+}
+function candlesFrom(cl) { return cl.map((c, i) => mk(i ? cl[i - 1] : c - U(-0.3, 0.3), c, U(0.08, 0.28), U(0.08, 0.28))); }
+/* extremo local: 'peak' = máximo (sg>0) o mínimo (sg<0); 'trough' al revés */
+function ext(cs, i, kind, sg, r = 2) {
+  const a = Math.max(0, i - r), b = Math.min(cs.length - 1, i + r); let v = null;
+  const wantMax = (kind === 'peak') === (sg > 0);
+  for (let k = a; k <= b; k++) { const x = wantMax ? cs[k].h : cs[k].l; if (v === null || (wantMax ? x > v : x < v)) v = x; }
+  return v;
+}
+function build(N, nodes, sg, noise) {
+  const sc = nodes.map(n => [n[0], n[1] * sg, n[2]]);
+  const r = route(N, sc, noise === undefined ? 0.18 : noise);
+  return { cs: candlesFrom(r.closes), idx: r.idx };
+}
+const jf = f => (f > 0 && f < 1 ? f + U(-0.015, 0.015) : f);
+const lineAt = (a, b) => ({ i1: a[0], v1: a[1], i2: b[0], v2: b[1] });
+
+function gDouble(sg) { // doble techo (1) / doble piso (-1)
+  const sf = U(0.85, 1.2), N = Math.round(U(44, 52)), pk = 8 * sf, tr = 3.2 * sf * U(0.9, 1.1), j = () => U(-0.25, 0.25) * sf;
+  const nodes = [[0, 0], [jf(.26), pk + j()], [jf(.5), tr], [jf(.74), pk + j()], [jf(.86), tr + .3 * sf], [1, tr - 2.3 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const lv = (ext(g.cs, ix[1], 'peak', sg) + ext(g.cs, ix[3], 'peak', sg)) / 2, nk = ext(g.cs, ix[2], 'trough', sg);
+  return { cs: g.cs, sf, meta: { ix }, lines: [
+    Object.assign(lineAt([ix[1], lv], [ix[3], lv]), { t: sg > 0 ? 'Techo' : 'Piso' }),
+    Object.assign(lineAt([ix[1], nk], [N - 1, nk]), { t: 'Cuello' })] };
+}
+function gTriple(sg) {
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54)), pk = 8 * sf, tr = 3.4 * sf, j = () => U(-0.25, 0.25) * sf;
+  const nodes = [[0, 0], [jf(.13), pk + j()], [jf(.27), tr + j()], [jf(.43), pk + j()], [jf(.57), tr + j()], [jf(.73), pk + j()], [jf(.86), tr + .4 * sf], [1, tr - 2.4 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const lv = (ext(g.cs, ix[1], 'peak', sg) + ext(g.cs, ix[3], 'peak', sg) + ext(g.cs, ix[5], 'peak', sg)) / 3;
+  const t1 = ext(g.cs, ix[2], 'trough', sg), t2 = ext(g.cs, ix[4], 'trough', sg), nk = sg > 0 ? Math.min(t1, t2) : Math.max(t1, t2);
+  return { cs: g.cs, sf, meta: { ix }, lines: [
+    Object.assign(lineAt([ix[1], lv], [ix[5], lv]), { t: sg > 0 ? 'Techo' : 'Piso' }),
+    Object.assign(lineAt([ix[2], nk], [N - 1, nk]), { t: 'Cuello' })] };
+}
+function gHCH(sg) {
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54)), ls = 5 * sf, rs = ls + U(-0.5, 0.5) * sf, n1 = 2.4 * sf, n2 = n1 + U(-0.3, 0.3) * sf, hd = 9 * sf * U(0.97, 1.1), nk = (n1 + n2) / 2;
+  const nodes = [[0, 0], [jf(.12), ls], [jf(.25), n1], [jf(.42), hd], [jf(.58), n2], [jf(.74), rs], [jf(.87), nk + .2 * sf], [1, nk - 2.4 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const a = ext(g.cs, ix[2], 'trough', sg), b = ext(g.cs, ix[4], 'trough', sg), sl = (b - a) / (ix[4] - ix[2]);
+  return { cs: g.cs, sf, meta: { ix }, lines: [Object.assign(lineAt([ix[2], a], [N - 1, a + sl * (N - 1 - ix[2])]), { t: 'Cuello' })] };
+}
+function gFlag(sg) {
+  const sf = U(0.85, 1.2), N = Math.round(U(44, 52)), top = 10 * sf, end = 7.3 * sf;
+  const f1 = jf(.38), f2 = jf(.82);
+  const nodes = [[0, 0, .2], [f1, top, .2], [f2, end, .3], [1, 12.5 * sf, .2]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const cen = i => (top + (end - top) * (i - ix[1]) / (ix[2] - ix[1])) * sg, w = 1.0 * sf;
+  return { cs: g.cs, sf, meta: { ix, w, top, end }, lines: [
+    Object.assign(lineAt([ix[1], cen(ix[1]) + w], [N - 1, cen(N - 1) + w]), { t: sg > 0 ? 'Techo de la bandera' : 'Techo de la bandera', k: 'u' }),
+    Object.assign(lineAt([ix[1], cen(ix[1]) - w], [N - 1, cen(N - 1) - w]), { t: '', k: 'l' })] };
+}
+function gTriAsc(sg) {
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54)), R = 7.5 * sf, j = () => U(-0.2, 0.2) * sf;
+  const nodes = [[0, 0], [jf(.26), R + j()], [jf(.38), 4.0 * sf], [jf(.51), R + j()], [jf(.63), 5.5 * sf], [jf(.75), R + j()], [jf(.84), 6.4 * sf], [1, R + 3.2 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const lv = (ext(g.cs, ix[1], 'peak', sg) + ext(g.cs, ix[3], 'peak', sg) + ext(g.cs, ix[5], 'peak', sg)) / 3;
+  return { cs: g.cs, sf, meta: { ix }, lines: [
+    Object.assign(lineAt([ix[1], lv], [N - 1, lv]), { t: sg > 0 ? 'Techo plano' : 'Piso plano' }),
+    Object.assign(lineAt([ix[2], ext(g.cs, ix[2], 'trough', sg)], [ix[6], ext(g.cs, ix[6], 'trough', sg)]), { t: '' })] };
+}
+function gTriSym() {
+  const sg = pickOne([1, -1]), sf = U(0.85, 1.2), N = Math.round(U(46, 54));
+  const nodes = [[0, 0], [jf(.17), 8.6 * sf], [jf(.29), 1.4 * sf], [jf(.43), 7.6 * sf], [jf(.55), 2.8 * sf], [jf(.67), 6.7 * sf], [jf(.77), 3.9 * sf], [jf(.86), 5.9 * sf], [jf(.94), 4.7 * sf], [1, 5.3 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const up1 = ext(g.cs, ix[1], 'peak', sg), up2 = ext(g.cs, ix[7], 'peak', sg), lo1 = ext(g.cs, ix[2], 'trough', sg), lo2 = ext(g.cs, ix[8], 'trough', sg);
+  return { cs: g.cs, sf, meta: { ix, sg }, lines: [Object.assign(lineAt([ix[1], up1], [ix[7], up2]), { t: '' }), Object.assign(lineAt([ix[2], lo1], [ix[8], lo2]), { t: '' })] };
+}
+function gBreak(sg) { // ruptura de línea de tendencia
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54)), L = f => (8.5 - 6.0 * f) * sf, j = () => U(-0.1, 0.1) * sf, d = () => U(2.3, 3.0) * sf;
+  const fp = [.12, .34, .56, .76], ft = [.23, .45, .66];
+  const nodes = [[0, 7.0 * sf], [fp[0], L(fp[0]) + j()], [ft[0], L(ft[0]) - d()], [fp[1], L(fp[1]) + j()], [ft[1], L(ft[1]) - d()], [fp[2], L(fp[2]) + j()], [ft[2], L(ft[2]) - d()], [fp[3], L(fp[3]) + j()], [.85, L(.85) - U(1.8, 2.4) * sf], [1, L(1) + 3.4 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx, at = i => L(i / (N - 1)) * sg;
+  return { cs: g.cs, sf, meta: { ix, L, N, sg }, lines: [Object.assign(lineAt([ix[1], at(ix[1])], [N - 1, at(N - 1)]), { t: 'Tendencia' })] };
+}
+function gBounce(sg) { // rebote en soporte (1) / rechazo en resistencia (-1)
+  const sf = U(0.85, 1.2), N = Math.round(U(44, 52)), j = () => U(0, 0.25) * sf;
+  const nodes = [[0, 3.5 * sf], [jf(.14), 0], [jf(.40), 5.5 * sf], [jf(.66), j()], [jf(.88), 1.0 * sf], [1, 2.6 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const lv = (ext(g.cs, ix[1], 'trough', sg) + ext(g.cs, ix[3], 'trough', sg)) / 2;
+  return { cs: g.cs, sf, meta: { ix }, lines: [Object.assign(lineAt([ix[1], lv], [N - 1, lv]), { t: sg > 0 ? 'Soporte' : 'Resistencia' })] };
+}
+
+function gWedge(sg) { // cuña ascendente (1, bajista) / descendente (-1, alcista)
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54));
+  const nodes = [[0, 0], [jf(.14), 5.6 * sf], [jf(.26), 2.3 * sf], [jf(.40), 7.0 * sf], [jf(.52), 4.6 * sf], [jf(.64), 8.0 * sf], [jf(.74), 7.0 * sf], [jf(.84), 8.6 * sf], [1, 3.4 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const p1 = ext(g.cs, ix[1], 'peak', sg), p4 = ext(g.cs, ix[7], 'peak', sg), t1 = ext(g.cs, ix[2], 'trough', sg), t3 = ext(g.cs, ix[6], 'trough', sg);
+  const sl = (t3 - t1) / (ix[6] - ix[2]);
+  return { cs: g.cs, sf, meta: { ix }, lines: [Object.assign(lineAt([ix[1], p1], [ix[7], p4]), { t: '' }), Object.assign(lineAt([ix[2], t1], [N - 1, t1 + sl * (N - 1 - ix[2])]), { t: 'Línea de ruptura' })] };
+}
+function gRect(sg) { // rectángulo alcista (1) / bajista (-1)
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54)), j = () => U(-0.2, 0.2) * sf, R = 6.2 * sf, S = 3.6 * sf;
+  const nodes = [[0, 0], [jf(.20), R + j()], [jf(.32), S + j()], [jf(.46), R + j()], [jf(.58), S + j()], [jf(.70), R + j()], [jf(.80), S + j()], [jf(.92), R + 0.4 * sf], [1, R + 3.3 * sf]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const rv = (ext(g.cs, ix[1], 'peak', sg) + ext(g.cs, ix[3], 'peak', sg) + ext(g.cs, ix[5], 'peak', sg)) / 3;
+  const sv = (ext(g.cs, ix[2], 'trough', sg) + ext(g.cs, ix[4], 'trough', sg) + ext(g.cs, ix[6], 'trough', sg)) / 3;
+  return { cs: g.cs, sf, meta: { ix }, lines: [Object.assign(lineAt([ix[1], rv], [N - 1, rv]), { t: sg > 0 ? 'Resistencia' : 'Soporte' }), Object.assign(lineAt([ix[2], sv], [ix[6] + 2, sv]), { t: sg > 0 ? 'Soporte' : 'Resistencia' })] };
+}
+function gCup() { // taza con asa
+  const sf = U(0.85, 1.2), N = Math.round(U(56, 62)), adv = 8 * sf, depth = 3.0 * sf * U(0.9, 1.1), rimR = adv + U(-0.4, 0.4) * sf, hd = depth * U(0.15, 0.3);
+  const pre = 9, cup = Math.round(N * 0.40), han = Math.round(N * 0.16), brk = N - pre - cup - han, cl = [];
+  for (let i = 0; i < pre; i++) cl.push(i === pre - 1 ? adv : adv * (i + 1) / pre + U(-0.15, 0.15));
+  for (let i = 0; i < cup; i++) { const g = (i + 1) / cup; cl.push(i === cup - 1 ? rimR : adv + (rimR - adv) * g - depth * Math.pow(Math.sin(Math.PI * g), 0.7) + U(-0.12, 0.12)); }
+  for (let i = 0; i < han; i++) { const h = (i + 1) / han; cl.push(i === han - 1 ? rimR : rimR - hd * Math.sin(Math.PI * h) + U(-0.1, 0.1)); }
+  for (let i = 0; i < brk; i++) cl.push(rimR + 2.8 * sf * (i + 1) / brk + U(-0.1, 0.1));
+  const cs = candlesFrom(cl), ixL = pre - 1, ixR = pre + cup - 1, lv = Math.max(ext(cs, ixL, 'peak', 1), ext(cs, ixR, 'peak', 1));
+  return { cs, sf, meta: { ixL, ixB: pre + Math.floor(cup / 2), ixR, ixH: pre + cup + Math.floor(han / 2), ixK: pre + cup + han }, lines: [Object.assign(lineAt([ixL, lv], [N - 1, lv]), { t: 'Borde' })] };
+}
+function gRound(sg) { // fondo redondeado (1) / techo redondeado (-1)
+  const sf = U(0.85, 1.2), N = Math.round(U(50, 58)), rim = 6 * sf, dp = 6 * sf, nb = Math.round(N * 0.88), cl = [];
+  for (let i = 0; i < N; i++) {
+    let y;
+    if (i < nb) { const g = i / (nb - 1); y = rim - dp * Math.pow(Math.sin(Math.PI * g), 0.8); if (i > 0 && i < nb - 1) y += U(-0.15, 0.15); }
+    else y = rim + 2.6 * sf * (i - nb + 1) / (N - nb) + U(-0.1, 0.1);
+    cl.push(y * sg);
+  }
+  const cs = candlesFrom(cl), lv = ext(cs, 1, 'peak', sg);
+  return { cs, sf, meta: { nb, N, sg }, lines: [Object.assign(lineAt([0, lv], [N - 1, lv]), { t: sg > 0 ? 'Resistencia' : 'Soporte' })] };
+}
+function gPennant(sg) { // banderín alcista (1) / bajista (-1)
+  const sf = U(0.85, 1.2), N = Math.round(U(46, 54));
+  const nodes = [[0, 0, .2], [jf(.34), 10 * sf, .2], [jf(.42), 6.6 * sf, .1], [jf(.50), 9.1 * sf, .1], [jf(.57), 7.6 * sf, .1], [jf(.64), 8.6 * sf, .1], [jf(.70), 8.2 * sf, .1], [1, 13 * sf, .2]];
+  const g = build(N, nodes, sg), ix = g.idx;
+  const p1 = ext(g.cs, ix[1], 'peak', sg), p3 = ext(g.cs, ix[5], 'peak', sg), t1 = ext(g.cs, ix[2], 'trough', sg), t3 = ext(g.cs, ix[6], 'trough', sg);
+  const su = (p3 - p1) / (ix[5] - ix[1]);
+  return { cs: g.cs, sf, meta: { ix }, lines: [Object.assign(lineAt([ix[1], p1], [ix[6] + 2, p3 + su * (ix[6] + 2 - ix[5])]), { t: 'Línea de ruptura' }), Object.assign(lineAt([ix[2], t1], [ix[6], t3]), { t: '' })] };
+}
+
+/* ---------- Catálogo ---------- */
+const CAT = { vela: 'Patrón de velas', rev: 'Reversión', cont: 'Continuación', rup: 'Ruptura' };
+const PATTERNS = [
+  /* ===== UNA VELA ===== */
+  { id: 'martillo', name: 'Martillo', dir: 'up', cat: 'vela', n: 1, trend: 'down',
+    gen(L) { const o = L - 0.05, c = o + U(0.25, 0.45); return [mk(o, c, 0.03, U(1.3, 1.8))]; },
+    text: 'Una vela de cuerpo pequeño arriba y mecha inferior larga. Los vendedores empujaron el precio hacia abajo, pero los compradores lo devolvieron cerca de la apertura.',
+    takeaway: 'La mecha larga hacia abajo muestra que la caída fue rechazada.',
+    look: ['Aparece después de una caída', 'Mecha inferior de al menos el doble del cuerpo', 'Casi sin mecha superior'],
+    fails: 'Si la vela siguiente no cierra por encima del cuerpo, el rechazo no se confirmó y la caída suele continuar.', rel: ['hombre-colgado', 'doji-libelula'] },
+  { id: 'hombre-colgado', name: 'Hombre colgado', dir: 'down', cat: 'vela', n: 1, trend: 'up',
+    gen(L) { const c = L + 0.05, o = c + U(0.2, 0.4); return [mk(o, c, 0.03, U(1.3, 1.8))]; },
+    text: 'Tiene la misma forma que el martillo, pero aparece tras una subida. La mecha inferior larga avisa de que ya hubo ventas fuertes dentro de la sesión.',
+    takeaway: 'La forma es de martillo. El contexto la vuelve bajista.',
+    look: ['Viene de una tendencia alcista', 'Mecha inferior larga y cuerpo arriba', 'Mejor con una vela bajista de confirmación'],
+    fails: 'Si la vela siguiente abre y cierra más arriba, el aviso se cancela. Necesita una confirmación bajista.', rel: ['martillo', 'estrella-fugaz'] },
+  { id: 'martillo-invertido', name: 'Martillo invertido', dir: 'up', cat: 'vela', n: 1, trend: 'down',
+    gen(L) { const o = L - 0.05, c = o + U(0.25, 0.45); return [mk(o, c, U(1.3, 1.8), 0.03)]; },
+    text: 'Cuerpo pequeño abajo y mecha superior larga, tras una caída. Los compradores intentaron subir; falta ver si la vela siguiente lo confirma.',
+    takeaway: 'Por sí sola es solo un intento. La vela siguiente decide.',
+    look: ['Viene de una tendencia bajista', 'Mecha superior larga y casi nada de mecha inferior', 'Pide una vela alcista de confirmación'],
+    fails: 'Sin una vela de confirmación es solo una mecha larga más. En una caída fuerte suele ser apenas una pausa.', rel: ['estrella-fugaz', 'martillo'] },
+  { id: 'estrella-fugaz', name: 'Estrella fugaz', dir: 'down', cat: 'vela', n: 1, trend: 'up',
+    gen(L) { const o = L + 0.05, c = o - U(0.2, 0.4); return [mk(o, c, U(1.3, 1.8), 0.03)]; },
+    text: 'Después de una subida, el precio sube con fuerza durante la sesión pero cierra cerca de donde abrió, dejando una mecha superior larga.',
+    takeaway: 'Subir y no poder sostenerlo es señal de cansancio de los compradores.',
+    look: ['Tendencia alcista previa', 'Mecha superior de al menos el doble del cuerpo', 'Cuerpo pequeño en la parte baja de la vela'],
+    fails: 'En un rango lateral, una mecha larga arriba dice muy poco. Pesa más cuando toca una resistencia ya conocida.', rel: ['martillo-invertido', 'doji-lapida'] },
+  { id: 'doji-libelula', name: 'Doji libélula', dir: 'up', cat: 'vela', n: 1, trend: 'down',
+    gen(L) { const o = L - 0.05, c = o + U(-0.02, 0.02); return [mk(o, c, 0.02, U(1.3, 1.8))]; },
+    text: 'Apertura, cierre y máximo quedan casi al mismo nivel, con una mecha inferior larga. Los vendedores empujaron el precio hacia abajo, pero los compradores lo devolvieron hasta el punto de partida.',
+    takeaway: 'Cerrar donde se abrió tras una caída larga muestra que la venta perdió fuerza.',
+    look: ['Aparece después de una caída', 'Cuerpo casi inexistente y mecha inferior larga', 'Casi sin mecha superior'],
+    fails: 'Si la vela siguiente cierra por debajo de su mínimo, el rechazo no se confirmó. Un doji suelto en un rango lateral dice poco.', rel: ['martillo', 'doji-lapida'] },
+  { id: 'doji-lapida', name: 'Doji lápida', dir: 'down', cat: 'vela', n: 1, trend: 'up',
+    gen(L) { const o = L + 0.05, c = o + U(-0.02, 0.02); return [mk(o, c, U(1.3, 1.8), 0.02)]; },
+    text: 'Apertura, cierre y mínimo quedan casi al mismo nivel, con una mecha superior larga. Los compradores subieron el precio, pero los vendedores lo devolvieron al punto de partida.',
+    takeaway: 'Subir mucho y cerrar donde se abrió es una señal de agotamiento de los compradores.',
+    look: ['Aparece después de una subida', 'Cuerpo casi inexistente y mecha superior larga', 'Casi sin mecha inferior'],
+    fails: 'Si la vela siguiente cierra por encima de su máximo, la subida sigue y el aviso se cancela.', rel: ['estrella-fugaz', 'doji-libelula'] },
+  { id: 'marubozu-alcista', name: 'Marubozu alcista', dir: 'up', cat: 'vela', n: 1, trend: 'up',
+    gen(L) { const o = L - 0.02, c = o + U(1.6, 2.0); return [mk(o, c, 0.02, 0.02)]; },
+    text: 'Una vela verde de cuerpo completo y prácticamente sin mechas. Abrió en su mínimo y cerró en su máximo: los compradores dominaron toda la sesión.',
+    takeaway: 'Sin mechas, los vendedores no lograron tomar el control en ningún momento.',
+    look: ['Cuerpo verde largo comparado con las velas previas', 'Sin mecha superior ni inferior (o casi)', 'Mejor si ya hay una tendencia alcista en marcha'],
+    fails: 'Tras una subida muy extendida puede ser un último empujón antes de agotarse. Mira qué hace la vela siguiente.', rel: ['marubozu-bajista', 'cinturon-alcista'] },
+  { id: 'marubozu-bajista', name: 'Marubozu bajista', dir: 'down', cat: 'vela', n: 1, trend: 'down',
+    gen(L) { const o = L + 0.02, c = o - U(1.6, 2.0); return [mk(o, c, 0.02, 0.02)]; },
+    text: 'Una vela roja de cuerpo completo y prácticamente sin mechas. Abrió en su máximo y cerró en su mínimo: los vendedores dominaron toda la sesión.',
+    takeaway: 'Sin mechas, los compradores no lograron reaccionar en ningún momento.',
+    look: ['Cuerpo rojo largo comparado con las velas previas', 'Sin mecha superior ni inferior (o casi)', 'Mejor si ya hay una tendencia bajista en marcha'],
+    fails: 'Tras una caída muy extendida puede ser un último empujón vendedor antes de agotarse. Mira qué hace la vela siguiente.', rel: ['marubozu-alcista', 'cinturon-bajista'] },
+  { id: 'cinturon-alcista', name: 'Cinturón alcista', dir: 'up', cat: 'vela', n: 1, trend: 'down',
+    gen(L) { const o = L - 0.02, c = o + U(1.6, 2.0); return [mk(o, c, U(0.2, 0.35), 0.01)]; },
+    text: 'Una vela verde larga que abre justo en su mínimo y sube tras una caída: los vendedores no lograron empujar el precio ni un poco por debajo de la apertura.',
+    takeaway: 'Abrir en el mínimo y subir sin mirar atrás es un primer aviso de giro.',
+    look: ['Viene de una caída', 'Abre en su mínimo (sin mecha inferior)', 'Cuerpo largo con una mecha superior pequeña'],
+    fails: 'Sola es solo un aviso. Si la caída continúa en la vela siguiente, la señal no se confirmó.', rel: ['marubozu-alcista', 'martillo'] },
+  { id: 'cinturon-bajista', name: 'Cinturón bajista', dir: 'down', cat: 'vela', n: 1, trend: 'up',
+    gen(L) { const o = L + 0.02, c = o - U(1.6, 2.0); return [mk(o, c, 0.01, U(0.2, 0.35))]; },
+    text: 'Una vela roja larga que abre justo en su máximo y cae tras una subida: los compradores no lograron empujar el precio ni un poco por encima de la apertura.',
+    takeaway: 'Abrir en el máximo y caer sin mirar atrás es un primer aviso de giro.',
+    look: ['Viene de una subida', 'Abre en su máximo (sin mecha superior)', 'Cuerpo largo con una mecha inferior pequeña'],
+    fails: 'Sola es solo un aviso. Si la subida continúa en la vela siguiente, la señal no se confirmó.', rel: ['marubozu-bajista', 'hombre-colgado'] },
+
+  /* ===== DOS VELAS ===== */
+  { id: 'envolvente-alcista', name: 'Envolvente alcista', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L - U(0.5, 0.8), 0.15, 0.15); const o = a.c - U(0.1, 0.2), c = a.o + U(0.3, 0.6); return [a, mk(o, c, 0.12, 0.12)]; },
+    text: 'Una vela verde grande cubre por completo el cuerpo de la vela roja anterior, después de una caída.',
+    takeaway: 'Mientras más grande el cuerpo verde frente al rojo, más fuerte el giro.',
+    look: ['Caída previa', 'El cuerpo verde envuelve al cuerpo rojo', 'Cierra por encima de la apertura de la roja'],
+    fails: 'En un mercado lateral de velas muy pequeñas, casi cualquier vela envuelve a la anterior y la señal pierde valor.', rel: ['envolvente-bajista', 'harami-alcista'] },
+  { id: 'envolvente-bajista', name: 'Envolvente bajista', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L + U(0.5, 0.8), 0.15, 0.15); const o = a.c + U(0.1, 0.2), c = a.o - U(0.3, 0.6); return [a, mk(o, c, 0.12, 0.12)]; },
+    text: 'Una vela roja grande cubre por completo el cuerpo de la vela verde anterior, después de una subida.',
+    takeaway: 'Los vendedores se quedan con toda la sesión anterior y algo más.',
+    look: ['Subida previa', 'El cuerpo rojo envuelve al cuerpo verde', 'Cierra por debajo de la apertura de la verde'],
+    fails: 'Cuando las velas son muy pequeñas y no hay subida previa, la envolvente casi no significa nada.', rel: ['envolvente-alcista', 'harami-bajista'] },
+  { id: 'harami-alcista', name: 'Harami alcista', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.7, 2.1), 0.2, 0.2); const o = a.c + 0.5, c = o + U(0.4, 0.6); return [a, mk(o, c, 0.2, 0.2)]; },
+    text: 'Tras una vela roja grande, aparece una vela pequeña cuyo cuerpo cabe dentro del cuerpo anterior. La caída se frena.',
+    takeaway: 'Una pausa dentro del cuerpo previo indica que la presión vendedora se agota.',
+    look: ['Una vela roja larga', 'Segunda vela con el cuerpo dentro del anterior', 'Mejor si la segunda es verde'],
+    fails: 'Si ninguna vela posterior cierra por encima de la primera, solo fue una pausa y la caída puede seguir.', rel: ['envolvente-alcista', 'tres-dentro-alcista'] },
+  { id: 'harami-bajista', name: 'Harami bajista', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.7, 2.1), 0.2, 0.2); const o = a.c - 0.5, c = o - U(0.4, 0.6); return [a, mk(o, c, 0.2, 0.2)]; },
+    text: 'Tras una vela verde grande, aparece una vela pequeña cuyo cuerpo cabe dentro del anterior. La subida pierde impulso.',
+    takeaway: 'Que la vela nueva no avance indica que los compradores dudan.',
+    look: ['Una vela verde larga', 'Segunda vela con el cuerpo dentro del anterior', 'Mejor si la segunda es roja'],
+    fails: 'Si ninguna vela posterior cierra por debajo de la primera, solo fue una pausa y la subida puede seguir.', rel: ['envolvente-bajista', 'tres-dentro-bajista'] },
+  { id: 'linea-penetrante', name: 'Línea penetrante', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.8, 2.1), 0.15, 0.15); const body = a.o - a.c; const o = a.c - U(0.3, 0.5), c = a.c + body * U(0.58, 0.78); return [a, mk(o, c, 0.15, 0.1)]; },
+    text: 'Tras una vela roja larga, la siguiente abre más abajo y cierra pasando la mitad del cuerpo rojo.',
+    takeaway: 'Pasar de la mitad del cuerpo es lo que la separa de un simple rebote.',
+    look: ['Abre por debajo del cierre anterior', 'Cierra por encima del punto medio del cuerpo rojo', 'No cubre todo el cuerpo (si no, sería envolvente)'],
+    fails: 'Si la segunda vela no pasa de la mitad del cuerpo rojo, es un rebote débil y no un giro.', rel: ['nube-oscura', 'envolvente-alcista'] },
+  { id: 'nube-oscura', name: 'Nube oscura', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.8, 2.1), 0.15, 0.15); const body = a.c - a.o; const o = a.c + U(0.3, 0.5), c = a.c - body * U(0.58, 0.78); return [a, mk(o, c, 0.1, 0.15)]; },
+    text: 'Tras una vela verde larga, la siguiente abre más arriba y cierra por debajo de la mitad del cuerpo verde.',
+    takeaway: 'Abrir con euforia y cerrar dentro de la vela previa es una señal de rechazo.',
+    look: ['Abre por encima del cierre anterior', 'Cierra por debajo del punto medio del cuerpo verde', 'Viene de una subida clara'],
+    fails: 'Si la segunda vela no baja de la mitad del cuerpo verde, es una toma de ganancias y no un giro.', rel: ['linea-penetrante', 'envolvente-bajista'] },
+  { id: 'pinza-inferior', name: 'Pinza inferior', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const X = L - 1.3; const a = mk(L, L - 1.0, 0.2, 0.3); a.l = X; const o = L - 1.05, c = L - 0.4; const b = mk(o, c, 0.2, o - X); b.l = X; return [a, b]; },
+    text: 'Dos velas seguidas tocan el mismo mínimo: primero una roja y luego una verde. El nivel resistió dos veces.',
+    takeaway: 'Un mínimo defendido dos veces marca un soporte que vale la pena vigilar.',
+    look: ['Caída previa', 'Los dos mínimos coinciden casi exactos', 'La segunda vela es verde'],
+    fails: 'Dos mínimos casi iguales también ocurren por casualidad. Sin un soporte previo en ese nivel, vale poco.', rel: ['pinza-superior', 'martillo'] },
+  { id: 'pinza-superior', name: 'Pinza superior', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const X = L + 1.3; const a = mk(L, L + 1.0, 0.3, 0.2); a.h = X; const o = L + 1.05, c = L + 0.4; const b = mk(o, c, X - o, 0.2); b.h = X; return [a, b]; },
+    text: 'Dos velas seguidas tocan el mismo máximo: primero una verde y luego una roja. El nivel frenó al precio dos veces.',
+    takeaway: 'Un máximo que no se supera dos veces marca una resistencia.',
+    look: ['Subida previa', 'Los dos máximos coinciden casi exactos', 'La segunda vela es roja'],
+    fails: 'Dos máximos casi iguales también ocurren por casualidad. Sin una resistencia previa en ese nivel, vale poco.', rel: ['pinza-inferior', 'estrella-fugaz'] },
+  { id: 'kicker-alcista', name: 'Kicker alcista', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.5, 1.8), 0.05, 0.05); const o = a.o + U(0.4, 0.7), c = o + U(1.6, 2.0); return [a, mk(o, c, 0.05, 0.05)]; },
+    text: 'El precio abre con un gap al alza y no mira atrás: a una vela roja le sigue una verde que abre por encima del máximo anterior, borrando la caída.',
+    takeaway: 'Es un cambio brusco de sentimiento, no una pausa: el gap deja atrás la vela anterior.',
+    look: ['Una vela roja y luego una verde, ambas de cuerpo largo', 'La verde abre por encima del máximo de la roja (gap)', 'Viene de una caída'],
+    fails: 'Si el gap se rellena en las velas siguientes, la señal pierde fuerza.', rel: ['kicker-bajista', 'envolvente-alcista'] },
+  { id: 'kicker-bajista', name: 'Kicker bajista', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.5, 1.8), 0.05, 0.05); const o = a.o - U(0.4, 0.7), c = o - U(1.6, 2.0); return [a, mk(o, c, 0.05, 0.05)]; },
+    text: 'El precio abre con un gap a la baja y no se recupera: a una vela verde le sigue una roja que abre por debajo del mínimo anterior, borrando la subida.',
+    takeaway: 'Es un cambio brusco de sentimiento, no una pausa: el gap deja atrás la vela anterior.',
+    look: ['Una vela verde y luego una roja, ambas de cuerpo largo', 'La roja abre por debajo del mínimo de la verde (gap)', 'Viene de una subida'],
+    fails: 'Si el gap se rellena en las velas siguientes, la señal pierde fuerza.', rel: ['kicker-alcista', 'envolvente-bajista'] },
+
+  /* ===== TRES VELAS ===== */
+  { id: 'estrella-manana', name: 'Estrella de la mañana', dir: 'up', cat: 'vela', n: 3, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.8, 2.0), 0.15, 0.15); const body = a.o - a.c; const bo = a.c - 0.7, bc = bo + pickOne([-1, 1]) * U(0.2, 0.35); const b = mk(bo, bc, U(0.1, 0.2), U(0.1, 0.2)); const co = tp(b) + 0.1, cc = a.c + body * U(0.6, 0.85); return [a, b, mk(co, cc, 0.15, 0.1)]; },
+    text: 'Una vela roja larga, una pequeña con hueco a la baja y una verde larga que recupera más de la mitad de la primera.',
+    takeaway: 'Mientras más adentro de la primera cierre la tercera, más limpia la señal.',
+    look: ['Caída previa y vela roja larga', 'Vela central pequeña, separada hacia abajo', 'Tercera vela verde que pasa la mitad de la primera'],
+    fails: 'Si la tercera vela no recupera más de la mitad de la primera, la señal queda a medias y suele fallar.', rel: ['estrella-doji-manana', 'tres-soldados'] },
+  { id: 'estrella-tarde', name: 'Estrella de la tarde', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.8, 2.0), 0.15, 0.15); const body = a.c - a.o; const bo = a.c + 0.7, bc = bo + pickOne([-1, 1]) * U(0.2, 0.35); const b = mk(bo, bc, U(0.1, 0.2), U(0.1, 0.2)); const co = bt(b) - 0.1, cc = a.c - body * U(0.6, 0.85); return [a, b, mk(co, cc, 0.1, 0.15)]; },
+    text: 'Una vela verde larga, una pequeña con hueco al alza y una roja larga que devuelve más de la mitad de la primera.',
+    takeaway: 'La vela central indecisa es el aviso. La tercera roja lo confirma.',
+    look: ['Subida previa y vela verde larga', 'Vela central pequeña, separada hacia arriba', 'Tercera vela roja que pasa la mitad de la primera'],
+    fails: 'Si la tercera vela no devuelve más de la mitad de la primera, la señal queda a medias y suele fallar.', rel: ['estrella-doji-tarde', 'tres-cuervos'] },
+  { id: 'estrella-doji-manana', name: 'Estrella doji de la mañana', dir: 'up', cat: 'vela', n: 3, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.8, 2.0), 0.15, 0.15); const body = a.o - a.c; const bo = a.c - 0.7, bc = bo + U(-0.03, 0.03); const b = mk(bo, bc, U(0.2, 0.3), U(0.2, 0.3)); const co = tp(b) + 0.1, cc = a.c + body * U(0.6, 0.85); return [a, b, mk(co, cc, 0.15, 0.1)]; },
+    text: 'Una estrella de la mañana cuya vela central es un doji: indecisión total justo después de una vela roja larga, antes de que una verde larga confirme el giro.',
+    takeaway: 'El doji muestra una pausa más clara que una vela pequeña: la caída se quedó sin dueño.',
+    look: ['Caída previa y vela roja larga', 'Vela central doji (apertura y cierre casi iguales), separada hacia abajo', 'Tercera vela verde que pasa la mitad de la primera'],
+    fails: 'Si la tercera vela no recupera más de la mitad de la primera, solo fue una pausa y la caída puede seguir.', rel: ['estrella-manana', 'doji-libelula'] },
+  { id: 'estrella-doji-tarde', name: 'Estrella doji de la tarde', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.8, 2.0), 0.15, 0.15); const body = a.c - a.o; const bo = a.c + 0.7, bc = bo + U(-0.03, 0.03); const b = mk(bo, bc, U(0.2, 0.3), U(0.2, 0.3)); const co = bt(b) - 0.1, cc = a.c - body * U(0.6, 0.85); return [a, b, mk(co, cc, 0.1, 0.15)]; },
+    text: 'Una estrella de la tarde cuya vela central es un doji: indecisión justo después de una vela verde larga, antes de que una roja larga confirme el giro.',
+    takeaway: 'El doji muestra una pausa más clara que una vela pequeña: la subida se quedó sin dueño.',
+    look: ['Subida previa y vela verde larga', 'Vela central doji (apertura y cierre casi iguales), separada hacia arriba', 'Tercera vela roja que pasa la mitad de la primera'],
+    fails: 'Si la tercera vela no devuelve más de la mitad de la primera, solo fue una pausa y la subida puede seguir.', rel: ['estrella-tarde', 'doji-lapida'] },
+  { id: 'tres-soldados', name: 'Tres soldados blancos', dir: 'up', cat: 'vela', n: 3, trend: 'down',
+    gen(L) { const out = []; let o = L - 0.05; for (let k = 0; k < 3; k++) { const c = o + U(1.2, 1.5); out.push(mk(o, c, U(0.08, 0.18), 0.12)); o = c - 0.35; } return out; },
+    text: 'Tres velas verdes seguidas. Cada una abre dentro del cuerpo de la anterior y cierra más alto, con poca mecha superior.',
+    takeaway: 'Cierres seguidos cerca del máximo indican una compra sostenida y sin prisa.',
+    look: ['Tres velas verdes de cuerpo similar', 'Cada cierre supera al anterior', 'Mechas superiores pequeñas'],
+    fails: 'Si las velas se achican y dejan mechas superiores largas, la compra se está agotando en vez de sostenerse.', rel: ['tres-cuervos', 'estrella-manana'] },
+  { id: 'tres-cuervos', name: 'Tres cuervos negros', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const out = []; let o = L + 0.05; for (let k = 0; k < 3; k++) { const c = o - U(1.2, 1.5); out.push(mk(o, c, 0.12, U(0.08, 0.18))); o = c + 0.35; } return out; },
+    text: 'Tres velas rojas seguidas. Cada una abre dentro del cuerpo de la anterior y cierra más bajo, con poca mecha inferior.',
+    takeaway: 'Cierres seguidos cerca del mínimo muestran una venta ordenada y constante.',
+    look: ['Tres velas rojas de cuerpo similar', 'Cada cierre queda más abajo que el anterior', 'Mechas inferiores pequeñas'],
+    fails: 'Si las velas se achican y dejan mechas inferiores largas, la venta se está agotando en vez de sostenerse.', rel: ['tres-soldados', 'estrella-tarde'] },
+  { id: 'tres-dentro-alcista', name: 'Tres por dentro alcista', dir: 'up', cat: 'vela', n: 3, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.7, 2.1), 0.2, 0.2); const o = a.c + 0.5, c = o + U(0.4, 0.6); const b = mk(o, c, 0.2, 0.2); const co = b.c - 0.05, cc = a.o + U(0.35, 0.7); return [a, b, mk(co, cc, 0.1, 0.1)]; },
+    text: 'Un harami alcista seguido de una tercera vela verde que cierra por encima de la apertura de la primera. La tercera vela es la confirmación.',
+    takeaway: 'El harami avisa. La tercera vela confirma.',
+    look: ['Caída previa y vela roja larga', 'Segunda vela verde pequeña dentro de la primera', 'Tercera vela verde que cierra sobre la apertura de la primera'],
+    fails: 'Si la tercera vela no cierra por encima de la apertura de la primera, queda solo un harami sin confirmar.', rel: ['harami-alcista', 'tres-fuera-alcista'] },
+  { id: 'tres-dentro-bajista', name: 'Tres por dentro bajista', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.7, 2.1), 0.2, 0.2); const o = a.c - 0.5, c = o - U(0.4, 0.6); const b = mk(o, c, 0.2, 0.2); const co = b.c + 0.05, cc = a.o - U(0.35, 0.7); return [a, b, mk(co, cc, 0.1, 0.1)]; },
+    text: 'Un harami bajista seguido de una tercera vela roja que cierra por debajo de la apertura de la primera. La tercera vela es la confirmación.',
+    takeaway: 'El harami avisa. La tercera vela confirma.',
+    look: ['Subida previa y vela verde larga', 'Segunda vela roja pequeña dentro de la primera', 'Tercera vela roja que cierra bajo la apertura de la primera'],
+    fails: 'Si la tercera vela no cierra por debajo de la apertura de la primera, queda solo un harami sin confirmar.', rel: ['harami-bajista', 'tres-fuera-bajista'] },
+  { id: 'tres-fuera-alcista', name: 'Tres por fuera alcista', dir: 'up', cat: 'vela', n: 3, trend: 'down',
+    gen(L) { const a = mk(L, L - U(0.5, 0.8), 0.15, 0.15); const o = a.c - U(0.1, 0.2), c = a.o + U(0.3, 0.6); const b = mk(o, c, 0.12, 0.12); const co = b.c - 0.1, cc = b.c + U(0.35, 0.7); return [a, b, mk(co, cc, 0.1, 0.1)]; },
+    text: 'Una envolvente alcista seguida de una tercera vela verde que cierra más arriba que la segunda. La envolvente avisa y la tercera confirma.',
+    takeaway: 'La envolvente avisa. Un nuevo cierre más alto confirma.',
+    look: ['Caída previa', 'Segunda vela verde que envuelve a la primera roja', 'Tercera vela verde con cierre más alto que la segunda'],
+    fails: 'Si la tercera vela cierra por debajo del cierre de la segunda, la confirmación falla y la envolvente queda sola.', rel: ['envolvente-alcista', 'tres-dentro-alcista'] },
+  { id: 'tres-fuera-bajista', name: 'Tres por fuera bajista', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(0.5, 0.8), 0.15, 0.15); const o = a.c + U(0.1, 0.2), c = a.o - U(0.3, 0.6); const b = mk(o, c, 0.12, 0.12); const co = b.c + 0.1, cc = b.c - U(0.35, 0.7); return [a, b, mk(co, cc, 0.1, 0.1)]; },
+    text: 'Una envolvente bajista seguida de una tercera vela roja que cierra más abajo que la segunda. La envolvente avisa y la tercera confirma.',
+    takeaway: 'La envolvente avisa. Un nuevo cierre más bajo confirma.',
+    look: ['Subida previa', 'Segunda vela roja que envuelve a la primera verde', 'Tercera vela roja con cierre más bajo que la segunda'],
+    fails: 'Si la tercera vela cierra por encima del cierre de la segunda, la confirmación falla y la envolvente queda sola.', rel: ['envolvente-bajista', 'tres-dentro-bajista'] },
+  { id: 'tasuki-alcista', name: 'Tasuki gap alcista', dir: 'up', cat: 'cont', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.0, 1.3), 0.08, 0.08); const o = a.h + U(0.45, 0.7), c = o + U(1.0, 1.3); const b = mk(o, c, 0.08, 0.08); const co = b.c - U(0.15, 0.3), cc = a.h + (b.l - a.h) * U(0.35, 0.65); return [a, b, mk(co, cc, 0.05, 0.05)]; },
+    text: 'Dos velas verdes separadas por un gap y luego una roja que abre dentro de la segunda y cierra dentro del hueco, sin taparlo.',
+    takeaway: 'Si el gap sobrevive a una vela roja fuerte, la tendencia sigue viva.',
+    look: ['Tendencia alcista previa', 'Gap entre las dos velas verdes', 'Vela roja que cierra dentro del gap sin taparlo'],
+    fails: 'Si la vela roja cierra por debajo del hueco (lo tapa), la continuación queda en duda.', rel: ['metodos-alcistas', 'tasuki-bajista'] },
+  { id: 'tasuki-bajista', name: 'Tasuki gap bajista', dir: 'down', cat: 'cont', n: 3, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.0, 1.3), 0.08, 0.08); const o = a.l - U(0.45, 0.7), c = o - U(1.0, 1.3); const b = mk(o, c, 0.08, 0.08); const co = b.c + U(0.15, 0.3), cc = a.l - (a.l - b.h) * U(0.35, 0.65); return [a, b, mk(co, cc, 0.05, 0.05)]; },
+    text: 'Dos velas rojas separadas por un gap y luego una verde que abre dentro de la segunda y cierra dentro del hueco, sin taparlo.',
+    takeaway: 'Si el gap sobrevive a una vela verde fuerte, la tendencia sigue viva.',
+    look: ['Tendencia bajista previa', 'Gap entre las dos velas rojas', 'Vela verde que cierra dentro del gap sin taparlo'],
+    fails: 'Si la vela verde cierra por encima del hueco (lo tapa), la continuación queda en duda.', rel: ['metodos-bajistas', 'tasuki-alcista'] },
+  { id: 'metodos-alcistas', name: 'Tres métodos alcistas', dir: 'up', cat: 'cont', n: 5, trend: 'up',
+    gen(L) { const a = mk(L, L + U(2.0, 2.4), 0.1, 0.1); const out = [a]; let o = a.c - 0.05; for (let k = 0; k < 3; k++) { const c = o - U(0.18, 0.3); out.push(mk(o, c, U(0.06, 0.12), U(0.06, 0.12))); o = c; } const e = mk(o + U(0.1, 0.3), a.c + U(0.4, 0.9), 0.1, 0.1); out.push(e); return out; },
+    text: 'Una vela verde fuerte, tres velas pequeñas de retroceso contenidas en su rango y una nueva vela verde que cierra por encima de la primera.',
+    takeaway: 'Un retroceso pequeño y ordenado es una pausa, no un cambio de tendencia.',
+    look: ['Tendencia alcista y primera vela verde larga', 'Tres velas pequeñas que no salen del rango de la primera', 'Quinta vela verde larga que cierra sobre la primera'],
+    fails: 'Si alguna de las velas pequeñas pierde el mínimo de la primera, ya no es una pausa sino un retroceso real.', rel: ['tasuki-alcista', 'tres-soldados'] },
+  { id: 'metodos-bajistas', name: 'Tres métodos bajistas', dir: 'down', cat: 'cont', n: 5, trend: 'down',
+    gen(L) { const a = mk(L, L - U(2.0, 2.4), 0.1, 0.1); const out = [a]; let o = a.c + 0.05; for (let k = 0; k < 3; k++) { const c = o + U(0.18, 0.3); out.push(mk(o, c, U(0.06, 0.12), U(0.06, 0.12))); o = c; } const e = mk(o - U(0.1, 0.3), a.c - U(0.4, 0.9), 0.1, 0.1); out.push(e); return out; },
+    text: 'Una vela roja fuerte, tres velas pequeñas de rebote contenidas en su rango y una nueva vela roja que cierra por debajo de la primera.',
+    takeaway: 'Un rebote pequeño y ordenado es una pausa, no un cambio de tendencia.',
+    look: ['Tendencia bajista y primera vela roja larga', 'Tres velas pequeñas que no salen del rango de la primera', 'Quinta vela roja larga que cierra bajo la primera'],
+    fails: 'Si alguna de las velas pequeñas supera el máximo de la primera, ya no es una pausa sino un rebote real.', rel: ['tasuki-bajista', 'tres-cuervos'] },
+
+  /* ===== VELAS ADICIONALES ===== */
+  { id: 'peonza', name: 'Peonza', dir: 'neutral', cat: 'vela', n: 1, trend: 'rand',
+    gen(L) { const o = L, c = o + pickOne([-1, 1]) * U(0.2, 0.35); return [mk(o, c, U(0.55, 0.8), U(0.55, 0.8))]; },
+    text: 'Una vela de cuerpo pequeño con mechas largas a ambos lados, más largas que el cuerpo. Compradores y vendedores se disputaron la sesión y ninguno se impuso.',
+    takeaway: 'Marca indecisión, no dirección: el movimiento previo se frena, pero no dice hacia dónde sigue.',
+    look: ['Cuerpo pequeño, verde o rojo', 'Mecha superior e inferior largas y parecidas', 'Sin sesgo propio: mira qué hace la vela siguiente'],
+    fails: 'Por sí sola no predice nada. En un mercado lateral aparece constantemente y no significa un giro.', rel: ['doji-patas-largas', 'martillo'] },
+  { id: 'doji-patas-largas', name: 'Doji de patas largas', dir: 'neutral', cat: 'vela', n: 1, trend: 'rand',
+    gen(L) { const o = L, c = o + U(-0.02, 0.02); return [mk(o, c, U(0.9, 1.2), U(0.9, 1.2))]; },
+    text: 'Apertura y cierre casi iguales, con mechas largas arriba y abajo. El precio recorrió un gran rango y volvió al punto de partida.',
+    takeaway: 'La indecisión es extrema: ninguno de los dos bandos logró imponerse.',
+    look: ['Cuerpo casi inexistente', 'Mecha superior y mecha inferior largas', 'Rango mucho mayor que el de las velas previas'],
+    fails: 'No indica dirección. Tras una tendencia larga puede avisar de un giro, pero necesita confirmación en la vela siguiente.', rel: ['doji-libelula', 'peonza'] },
+  { id: 'harami-cruz-alcista', name: 'Harami cruz alcista', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.7, 2.1), 0.2, 0.2); const o = a.c + U(0.6, 1.0), c = o + U(-0.03, 0.03); return [a, mk(o, c, U(0.2, 0.3), U(0.2, 0.3))]; },
+    text: 'Tras una vela roja larga, aparece un doji cuyo cuerpo queda dentro del cuerpo anterior. La caída se detiene en seco.',
+    takeaway: 'Un doji dentro de una vela grande indica una pausa total: la venta ya no tiene fuerza.',
+    look: ['Caída previa y vela roja larga', 'Segunda vela doji con el cuerpo dentro de la primera', 'Mejor con una vela alcista de confirmación'],
+    fails: 'Si la vela siguiente cierra por debajo del doji, la pausa no fue un giro.', rel: ['harami-alcista', 'doji-libelula'] },
+  { id: 'harami-cruz-bajista', name: 'Harami cruz bajista', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.7, 2.1), 0.2, 0.2); const o = a.c - U(0.6, 1.0), c = o + U(-0.03, 0.03); return [a, mk(o, c, U(0.2, 0.3), U(0.2, 0.3))]; },
+    text: 'Tras una vela verde larga, aparece un doji cuyo cuerpo queda dentro del cuerpo anterior. La subida se detiene en seco.',
+    takeaway: 'Un doji dentro de una vela grande indica una pausa total: la compra ya no tiene fuerza.',
+    look: ['Subida previa y vela verde larga', 'Segunda vela doji con el cuerpo dentro de la primera', 'Mejor con una vela bajista de confirmación'],
+    fails: 'Si la vela siguiente cierra por encima del doji, la pausa no fue un giro.', rel: ['harami-bajista', 'doji-lapida'] },
+  { id: 'contraataque-alcista', name: 'Contraataque alcista', dir: 'up', cat: 'vela', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.6, 2.0), 0.1, 0.1); const o = a.c - U(0.9, 1.3), c = a.c + U(-0.03, 0.03); return [a, mk(o, c, 0.08, 0.08)]; },
+    text: 'Una vela roja larga y luego una verde larga que abre con un gap a la baja y cierra en el mismo nivel donde cerró la roja. Los compradores devuelven todo el gap.',
+    takeaway: 'Cerrar en el mismo nivel borra el empuje de los vendedores, aunque no llega a envolverlo.',
+    look: ['Caída previa y vela roja larga', 'Verde larga que abre muy por debajo del cierre anterior', 'Cierre casi igual al cierre de la roja'],
+    fails: 'No supera a la roja, así que la señal es más débil que una envolvente. Espera confirmación.', rel: ['linea-penetrante', 'kicker-alcista'] },
+  { id: 'contraataque-bajista', name: 'Contraataque bajista', dir: 'down', cat: 'vela', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.6, 2.0), 0.1, 0.1); const o = a.c + U(0.9, 1.3), c = a.c + U(-0.03, 0.03); return [a, mk(o, c, 0.08, 0.08)]; },
+    text: 'Una vela verde larga y luego una roja larga que abre con un gap al alza y cierra en el mismo nivel donde cerró la verde. Los vendedores devuelven todo el gap.',
+    takeaway: 'Cerrar en el mismo nivel borra el empuje de los compradores, aunque no llega a envolverlo.',
+    look: ['Subida previa y vela verde larga', 'Roja larga que abre muy por encima del cierre anterior', 'Cierre casi igual al cierre de la verde'],
+    fails: 'No supera a la verde, así que la señal es más débil que una envolvente. Espera confirmación.', rel: ['nube-oscura', 'kicker-bajista'] },
+  { id: 'separacion-alcista', name: 'Líneas de separación alcista', dir: 'up', cat: 'cont', n: 2, trend: 'up',
+    gen(L) { const a = mk(L, L - U(0.8, 1.2), 0.08, 0.08); const o = a.o, c = o + U(1.6, 2.0); return [a, mk(o, c, U(0.2, 0.35), 0.01)]; },
+    text: 'En una tendencia alcista, una vela roja es seguida por una verde larga que abre en el mismo precio que abrió la roja y sin mecha inferior. El retroceso queda borrado.',
+    takeaway: 'La vela roja solo fue una pausa: el precio vuelve a su punto de apertura y sigue subiendo.',
+    look: ['Tendencia alcista previa', 'Una vela roja y luego una verde larga', 'Ambas abren en el mismo precio, y la verde sin mecha inferior'],
+    fails: 'Si la vela siguiente no mantiene la subida, volver al nivel de apertura no basta.', rel: ['cinturon-alcista', 'tasuki-alcista'] },
+  { id: 'separacion-bajista', name: 'Líneas de separación bajista', dir: 'down', cat: 'cont', n: 2, trend: 'down',
+    gen(L) { const a = mk(L, L + U(0.8, 1.2), 0.08, 0.08); const o = a.o, c = o - U(1.6, 2.0); return [a, mk(o, c, 0.01, U(0.2, 0.35))]; },
+    text: 'En una tendencia bajista, una vela verde es seguida por una roja larga que abre en el mismo precio que abrió la verde y sin mecha superior. El rebote queda borrado.',
+    takeaway: 'La vela verde solo fue una pausa: el precio vuelve a su punto de apertura y sigue cayendo.',
+    look: ['Tendencia bajista previa', 'Una vela verde y luego una roja larga', 'Ambas abren en el mismo precio, y la roja sin mecha superior'],
+    fails: 'Si la vela siguiente no mantiene la caída, volver al nivel de apertura no basta.', rel: ['cinturon-bajista', 'tasuki-bajista'] },
+  { id: 'bebe-abandonado-alcista', name: 'Bebé abandonado alcista', dir: 'up', cat: 'vela', n: 3, trend: 'down',
+    gen(L) { const a = mk(L, L - U(1.8, 2.0), 0.15, 0.15); const body = a.o - a.c; const bo = a.c - U(0.6, 0.8), b = mk(bo, bo + U(-0.03, 0.03), U(0.2, 0.3), U(0.2, 0.3)); const co = b.h + U(0.2, 0.35), cc = a.c + body * U(0.6, 0.85); return [a, b, mk(co, cc, 0.15, 0.1)]; },
+    text: 'Una vela roja larga, un doji separado por gaps y una vela verde larga. Las mechas del doji no tocan a ninguna de las otras velas: queda aislado.',
+    takeaway: 'Los dos gaps dejan al doji aislado: un giro poco frecuente, pero muy limpio.',
+    look: ['Caída previa y vela roja larga', 'Doji con gap hacia abajo, sin que sus mechas toquen a la roja', 'Vela verde larga con gap al alza que cierra dentro de la primera'],
+    fails: 'Es poco frecuente. Si el segundo gap se cierra en las velas siguientes, la señal se debilita.', rel: ['estrella-doji-manana', 'bebe-abandonado-bajista'] },
+  { id: 'bebe-abandonado-bajista', name: 'Bebé abandonado bajista', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.8, 2.0), 0.15, 0.15); const body = a.c - a.o; const bo = a.c + U(0.6, 0.8), b = mk(bo, bo + U(-0.03, 0.03), U(0.2, 0.3), U(0.2, 0.3)); const co = b.l - U(0.2, 0.35), cc = a.c - body * U(0.6, 0.85); return [a, b, mk(co, cc, 0.1, 0.15)]; },
+    text: 'Una vela verde larga, un doji separado por gaps y una vela roja larga. Las mechas del doji no tocan a ninguna de las otras velas: queda aislado.',
+    takeaway: 'Los dos gaps dejan al doji aislado: un giro poco frecuente, pero muy limpio.',
+    look: ['Subida previa y vela verde larga', 'Doji con gap hacia arriba, sin que sus mechas toquen a la verde', 'Vela roja larga con gap a la baja que cierra dentro de la primera'],
+    fails: 'Es poco frecuente. Si el segundo gap se cierra en las velas siguientes, la señal se debilita.', rel: ['estrella-doji-tarde', 'bebe-abandonado-alcista'] },
+  { id: 'dos-cuervos', name: 'Dos cuervos', dir: 'down', cat: 'vela', n: 3, trend: 'up',
+    gen(L) { const a = mk(L, L + U(1.4, 1.8), 0.1, 0.1); const bo = a.c + U(0.55, 0.65), b = mk(bo, bo - U(0.25, 0.3), 0.08, 0.08); const co = bo + U(0.1, 0.2), cc = a.c + U(0.03, 0.1); return [a, b, mk(co, cc, 0.08, 0.08)]; },
+    text: 'Tras una vela verde larga, una roja pequeña abre con gap al alza y una segunda roja más grande la envuelve, aunque todavía cierra por encima de la primera verde.',
+    takeaway: 'Dos velas rojas seguidas tras un gap muestran que los compradores ya no sostienen los precios altos.',
+    look: ['Subida previa y vela verde larga', 'Vela roja con gap por encima del cierre de la verde', 'Otra roja que envuelve a la segunda y cierra sobre el cierre de la verde'],
+    fails: 'Como la tercera vela aún cierra por encima de la primera, solo es un aviso: necesita que el precio siga bajando.', rel: ['estrella-tarde', 'tres-cuervos'] },
+
+  /* ===== FIGURAS DE GRÁFICO ===== */
+  { id: 'doble-techo', name: 'Doble techo', dir: 'down', cat: 'rev', grp: 'f', n: 0, gen: () => gDouble(1),
+    text: 'El precio sube a un nivel, retrocede y falla en el mismo nivel una segunda vez. Se confirma cuando cae por debajo del valle entre los dos picos.',
+    takeaway: 'Dos fracasos en el mismo techo y la pérdida del valle intermedio marcan el giro.',
+    look: ['Subida previa', 'Dos máximos casi al mismo nivel', 'Cierre por debajo del valle entre los picos (el cuello)'],
+    fails: 'Si el precio no pierde el valle intermedio, no hay confirmación y el techo todavía puede romperse hacia arriba.', rel: ['triple-techo', 'hch'] },
+  { id: 'doble-piso', name: 'Doble piso', dir: 'up', cat: 'rev', grp: 'f', n: 0, gen: () => gDouble(-1),
+    text: 'El precio cae a un nivel, rebota y sostiene ese mismo nivel en el retroceso. Se confirma cuando supera el pico entre los dos mínimos.',
+    takeaway: 'Dos pruebas del mismo piso y una ruptura del pico intermedio marcan el giro.',
+    look: ['Caída previa', 'Dos mínimos casi al mismo nivel', 'Cierre por encima del pico entre los mínimos (el cuello)'],
+    fails: 'Si el precio no supera el pico intermedio, no hay confirmación y el piso todavía puede perderse.', rel: ['triple-piso', 'hch-inv'] },
+  { id: 'triple-techo', name: 'Triple techo', dir: 'down', cat: 'rev', grp: 'f', n: 0, gen: () => gTriple(1),
+    text: 'Tres intentos contra el mismo techo, tres rechazos. Es menos frecuente que el doble techo, pero la presión vendedora en ese nivel es aún más evidente.',
+    takeaway: 'Cada rechazo agota un poco más a los compradores.',
+    look: ['Subida previa', 'Tres máximos casi al mismo nivel', 'Cierre por debajo del valle más bajo entre los picos'],
+    fails: 'Con tres intentos, un cuarto puede romper el techo. Sin pérdida del valle no hay confirmación.', rel: ['doble-techo', 'hch'] },
+  { id: 'triple-piso', name: 'Triple piso', dir: 'up', cat: 'rev', grp: 'f', n: 0, gen: () => gTriple(-1),
+    text: 'Tres pruebas del mismo piso que aguantan todas. La base es amplia y la ruptura del pico intermedio más alto marca el giro.',
+    takeaway: 'Cada prueba que aguanta agota un poco más a los vendedores.',
+    look: ['Caída previa', 'Tres mínimos casi al mismo nivel', 'Cierre por encima del pico más alto entre los mínimos'],
+    fails: 'Con tres pruebas, una cuarta puede perder el piso. Sin ruptura del pico intermedio no hay confirmación.', rel: ['doble-piso', 'hch-inv'] },
+  { id: 'hch', name: 'Hombro cabeza hombro', dir: 'down', cat: 'rev', grp: 'f', n: 0, gen: () => gHCH(1),
+    text: 'Tres picos: uno central más alto (la cabeza) entre dos más bajos y parecidos (los hombros). Se confirma al perder la línea que une los dos valles (el cuello).',
+    takeaway: 'Que el último pico no alcance a la cabeza muestra que los compradores ya no llegan.',
+    look: ['Subida previa', 'Cabeza claramente más alta que los dos hombros', 'Cierre por debajo del cuello'],
+    fails: 'Antes de perder el cuello solo es una forma posible: muchas veces el precio la deshace y sigue subiendo.', rel: ['hch-inv', 'doble-techo'] },
+  { id: 'hch-inv', name: 'Hombro cabeza hombro invertido', dir: 'up', cat: 'rev', grp: 'f', n: 0, gen: () => gHCH(-1),
+    text: 'La misma forma al revés: un valle central más profundo entre dos valles menos profundos. Se confirma al superar la línea que une los dos picos (el cuello).',
+    takeaway: 'Que el último valle no llegue a la cabeza muestra que los vendedores ya no empujan.',
+    look: ['Caída previa', 'Valle central claramente más profundo que los otros dos', 'Cierre por encima del cuello'],
+    fails: 'Antes de superar el cuello solo es una forma posible: muchas veces el precio la deshace y sigue cayendo.', rel: ['hch', 'doble-piso'] },
+  { id: 'bandera-alcista', name: 'Bandera alcista', dir: 'up', cat: 'cont', grp: 'f', n: 0, gen: () => gFlag(1),
+    text: 'Un avance fuerte (el mástil) seguido de una deriva superficial a la baja dentro de un canal estrecho (la bandera). Al romper por arriba, la subida suele retomarse.',
+    takeaway: 'Una pausa pequeña y ordenada tras un avance fuerte suele ser un respiro, no un cambio.',
+    look: ['Avance rápido y largo (el mástil)', 'Deriva corta y poco profunda en contra', 'Cierre fuera del techo del canal'],
+    fails: 'Si la bandera es profunda o larga frente al mástil, deja de ser una pausa. Sin ruptura no hay señal.', rel: ['bandera-bajista', 'triangulo-asc'] },
+  { id: 'bandera-bajista', name: 'Bandera bajista', dir: 'down', cat: 'cont', grp: 'f', n: 0, gen: () => gFlag(-1),
+    text: 'Una caída fuerte (el mástil) seguida de un rebote débil que deriva hacia arriba dentro de un canal estrecho (la bandera). Al romper por abajo, la caída suele retomarse.',
+    takeaway: 'Un rebote pequeño y ordenado tras una caída fuerte suele ser un respiro, no un cambio.',
+    look: ['Caída rápida y larga (el mástil)', 'Deriva corta y poco profunda en contra', 'Cierre fuera del piso del canal'],
+    fails: 'Si la bandera es profunda o larga frente al mástil, deja de ser una pausa. Sin ruptura no hay señal.', rel: ['bandera-alcista', 'triangulo-desc'] },
+  { id: 'triangulo-asc', name: 'Triángulo ascendente', dir: 'up', cat: 'cont', grp: 'f', n: 0, gen: () => gTriAsc(1),
+    text: 'Un techo plano con mínimos crecientes que lo presionan. Cada retroceso parte de un nivel más alto hasta que el precio rompe el techo.',
+    takeaway: 'Los compradores pagan cada vez más caro mientras los vendedores defienden el mismo precio.',
+    look: ['Tendencia alcista previa', 'Máximos casi iguales que forman un techo plano', 'Mínimos cada vez más altos'],
+    fails: 'Si rompe hacia abajo por la línea de mínimos crecientes, la lectura se invierte. Espera el cierre fuera.', rel: ['triangulo-desc', 'triangulo-sim'] },
+  { id: 'triangulo-desc', name: 'Triángulo descendente', dir: 'down', cat: 'cont', grp: 'f', n: 0, gen: () => gTriAsc(-1),
+    text: 'Un piso plano con máximos decrecientes que lo presionan. Cada rebote se queda más abajo hasta que el precio pierde el piso.',
+    takeaway: 'Los vendedores aceptan cada vez menos mientras los compradores defienden el mismo precio.',
+    look: ['Tendencia bajista previa', 'Mínimos casi iguales que forman un piso plano', 'Máximos cada vez más bajos'],
+    fails: 'Si rompe hacia arriba por la línea de máximos decrecientes, la lectura se invierte. Espera el cierre fuera.', rel: ['triangulo-asc', 'triangulo-sim'] },
+  { id: 'triangulo-sim', name: 'Triángulo simétrico', dir: 'neutral', cat: 'cont', grp: 'f', n: 0, gen: () => gTriSym(),
+    text: 'Máximos decrecientes y mínimos crecientes convergen en un punto. Marca una pausa de equilibrio: puede romper en cualquier dirección, con frecuencia en la de la tendencia previa.',
+    takeaway: 'Es una compresión: el precio prepara un movimiento, pero el patrón no dice hacia dónde.',
+    look: ['Máximos cada vez más bajos', 'Mínimos cada vez más altos', 'Un rango que se estrecha'],
+    fails: 'Las rupturas falsas son frecuentes. Espera un cierre claro fuera de las dos líneas.', rel: ['triangulo-asc', 'triangulo-desc'] },
+  { id: 'ruptura-alcista', name: 'Ruptura alcista de tendencia', dir: 'up', cat: 'rup', grp: 'f', n: 0, gen: () => gBreak(1),
+    text: 'El precio cierra por encima de una línea de tendencia bajista trazada sobre los máximos descendentes. La presión vendedora que marcaba la línea se agota.',
+    takeaway: 'Una línea con varios toques que por fin se supera cambia quién controla.',
+    look: ['Máximos descendentes que tocan una misma línea (tres toques o más)', 'Cierre claramente por encima de la línea', 'Mejor con una vela larga en la ruptura'],
+    fails: 'Las rupturas que vuelven dentro de la línea en pocas velas son falsas. Espera el cierre y mira si la línea se sostiene como soporte.', rel: ['ruptura-bajista', 'rebote-soporte'] },
+  { id: 'ruptura-bajista', name: 'Ruptura bajista de tendencia', dir: 'down', cat: 'rup', grp: 'f', n: 0, gen: () => gBreak(-1),
+    text: 'El precio cierra por debajo de una línea de tendencia alcista trazada sobre los mínimos ascendentes. El apoyo que marcaba la línea se pierde.',
+    takeaway: 'Una línea con varios toques que por fin se pierde cambia quién controla.',
+    look: ['Mínimos ascendentes que tocan una misma línea (tres toques o más)', 'Cierre claramente por debajo de la línea', 'Mejor con una vela larga en la ruptura'],
+    fails: 'Las rupturas que vuelven dentro de la línea en pocas velas son falsas. Espera el cierre y mira si la línea se sostiene como resistencia.', rel: ['ruptura-alcista', 'rechazo-resistencia'] },
+  { id: 'rebote-soporte', name: 'Rebote en soporte', dir: 'up', cat: 'rup', grp: 'f', n: 0, gen: () => gBounce(1),
+    text: 'El precio vuelve a un nivel que ya aguantó antes y se aleja de él otra vez. Si después supera el pico intermedio, se completa un doble piso.',
+    takeaway: 'Un nivel que ya frenó una caída suele volver a atraer compradores, mientras no se pierda al cierre.',
+    look: ['Un mínimo previo que fue defendido', 'Regreso al mismo nivel sin cerrar por debajo', 'Vela alcista que se aleja del nivel'],
+    fails: 'Cada prueba debilita un soporte. Si el precio cierra por debajo del nivel, el rebote falló.', rel: ['rechazo-resistencia', 'doble-piso'] },
+  { id: 'rechazo-resistencia', name: 'Rechazo en resistencia', dir: 'down', cat: 'rup', grp: 'f', n: 0, gen: () => gBounce(-1),
+    text: 'El precio llega a un nivel que ya lo frenó antes y es rechazado otra vez. Si después pierde el valle intermedio, se completa un doble techo.',
+    takeaway: 'Un nivel que ya frenó una subida suele volver a atraer vendedores, mientras no se supere al cierre.',
+    look: ['Un máximo previo que fue rechazado', 'Regreso al mismo nivel sin cerrar por encima', 'Vela bajista que se aleja del nivel'],
+    fails: 'Cada prueba debilita una resistencia. Si el precio cierra por encima del nivel, el rechazo falló.', rel: ['rebote-soporte', 'doble-techo'] },
+  { id: 'cuna-ascendente', name: 'Cuña ascendente', dir: 'down', cat: 'rev', grp: 'f', n: 0, gen: () => gWedge(1),
+    text: 'Máximos y mínimos más altos dentro de dos líneas ascendentes que convergen. La subida pierde fuerza porque el rango se estrecha. Se confirma al romper la línea inferior.',
+    takeaway: 'Un avance cada vez más estrecho indica que los compradores empujan con menos fuerza.',
+    look: ['Tendencia alcista previa', 'Dos líneas que suben y se acercan entre sí', 'Cierre por debajo de la línea inferior'],
+    fails: 'Si el precio rompe por arriba, la cuña queda anulada. Sin cierre fuera de la línea inferior no hay confirmación.', rel: ['cuna-descendente', 'triangulo-asc'] },
+  { id: 'cuna-descendente', name: 'Cuña descendente', dir: 'up', cat: 'rev', grp: 'f', n: 0, gen: () => gWedge(-1),
+    text: 'Máximos y mínimos más bajos dentro de dos líneas descendentes que convergen. La caída pierde fuerza porque el rango se estrecha. Se confirma al romper la línea superior.',
+    takeaway: 'Una caída cada vez más estrecha indica que los vendedores empujan con menos fuerza.',
+    look: ['Tendencia bajista previa', 'Dos líneas que bajan y se acercan entre sí', 'Cierre por encima de la línea superior'],
+    fails: 'Si el precio rompe por abajo, la cuña queda anulada. Sin cierre fuera de la línea superior no hay confirmación.', rel: ['cuna-ascendente', 'triangulo-desc'] },
+  { id: 'fondo-redondeado', name: 'Fondo redondeado', dir: 'up', cat: 'rev', grp: 'f', n: 0, gen: () => gRound(1),
+    text: 'Una caída gradual, una base plana y una recuperación gradual dibujan un cuenco. Se confirma al superar la resistencia que marca el borde del cuenco.',
+    takeaway: 'El cambio lento de la presión vendedora a la compradora dibuja una curva, no un pico.',
+    look: ['Caída previa', 'Forma de cuenco, no de V', 'Cierre por encima del borde del cuenco'],
+    fails: 'Es lento y fácil de ver tarde. Si no supera el borde, solo es una base en construcción.', rel: ['techo-redondeado', 'taza-asa'] },
+  { id: 'techo-redondeado', name: 'Techo redondeado', dir: 'down', cat: 'rev', grp: 'f', n: 0, gen: () => gRound(-1),
+    text: 'Una subida gradual, una meseta y una caída gradual dibujan un cuenco invertido. Se confirma al perder el soporte que marca el borde.',
+    takeaway: 'El cambio lento de la presión compradora a la vendedora dibuja una curva, no un pico.',
+    look: ['Subida previa', 'Forma de cuenco invertido, no de pico agudo', 'Cierre por debajo del borde'],
+    fails: 'Es lento y fácil de ver tarde. Si no pierde el borde, solo es una meseta en construcción.', rel: ['fondo-redondeado', 'doble-techo'] },
+  { id: 'banderin-alcista', name: 'Banderín alcista', dir: 'up', cat: 'cont', grp: 'f', n: 0, gen: () => gPennant(1),
+    text: 'Un avance fuerte (el mástil) seguido de un triángulo pequeño y simétrico que se estrecha. Al romper por arriba, la subida suele retomarse.',
+    takeaway: 'La pausa se comprime en un triángulo pequeño: el precio acumula energía antes de seguir.',
+    look: ['Avance rápido y largo (el mástil)', 'Máximos más bajos y mínimos más altos formando un triángulo corto', 'Cierre por encima de la línea superior'],
+    fails: 'Si la pausa se alarga mucho, pierde su sentido de continuación. Sin ruptura no hay señal.', rel: ['bandera-alcista', 'triangulo-sim'] },
+  { id: 'banderin-bajista', name: 'Banderín bajista', dir: 'down', cat: 'cont', grp: 'f', n: 0, gen: () => gPennant(-1),
+    text: 'Una caída fuerte (el mástil) seguida de un triángulo pequeño y simétrico que se estrecha. Al romper por abajo, la caída suele retomarse.',
+    takeaway: 'La pausa se comprime en un triángulo pequeño: el precio acumula energía antes de seguir.',
+    look: ['Caída rápida y larga (el mástil)', 'Máximos más bajos y mínimos más altos formando un triángulo corto', 'Cierre por debajo de la línea inferior'],
+    fails: 'Si la pausa se alarga mucho, pierde su sentido de continuación. Sin ruptura no hay señal.', rel: ['bandera-bajista', 'triangulo-sim'] },
+  { id: 'rect-alcista', name: 'Rectángulo alcista', dir: 'up', cat: 'cont', grp: 'f', n: 0, gen: () => gRect(1),
+    text: 'Tras una subida, el precio se mueve entre un soporte y una resistencia horizontales, probando cada uno al menos dos veces. La señal llega al romper la resistencia.',
+    takeaway: 'Un rango lateral dentro de una tendencia suele ser una pausa para tomar aire.',
+    look: ['Tendencia alcista previa', 'Resistencia y soporte horizontales con al menos dos toques cada uno', 'Cierre por encima de la resistencia'],
+    fails: 'Si rompe por debajo del soporte, el rectángulo se convierte en un giro. Espera el cierre fuera del rango.', rel: ['rect-bajista', 'triangulo-asc'] },
+  { id: 'rect-bajista', name: 'Rectángulo bajista', dir: 'down', cat: 'cont', grp: 'f', n: 0, gen: () => gRect(-1),
+    text: 'Tras una caída, el precio se mueve entre un soporte y una resistencia horizontales, probando cada uno al menos dos veces. La señal llega al romper el soporte.',
+    takeaway: 'Un rango lateral dentro de una tendencia suele ser una pausa antes de seguir.',
+    look: ['Tendencia bajista previa', 'Resistencia y soporte horizontales con al menos dos toques cada uno', 'Cierre por debajo del soporte'],
+    fails: 'Si rompe por encima de la resistencia, el rectángulo se convierte en un giro. Espera el cierre fuera del rango.', rel: ['rect-alcista', 'triangulo-desc'] },
+  { id: 'taza-asa', name: 'Taza con asa', dir: 'up', cat: 'cont', grp: 'f', n: 0, gen: () => gCup(),
+    text: 'Tras una subida, el precio dibuja una base redondeada en forma de U (la taza), con bordes a un nivel parecido, y un pequeño retroceso (el asa) antes de romper el borde.',
+    takeaway: 'La taza muestra una acumulación paciente y el asa, una última sacudida antes de la ruptura.',
+    look: ['Subida previa y base redondeada (no en V)', 'Los dos bordes de la taza a un nivel parecido', 'Asa poco profunda: retrocede menos de la mitad de la taza'],
+    fails: 'Si el asa es muy profunda o la taza muy puntiaguda, pierde fiabilidad. Sin ruptura del borde no hay señal.', rel: ['fondo-redondeado', 'bandera-alcista'] }
+];
+PATTERNS.forEach(p => { if (!p.grp) p.grp = 'c'; });
+const PBYID = Object.fromEntries(PATTERNS.map(p => [p.id, p]));
+
+/* Patrones que no deben aparecer juntos como opciones: uno contiene al otro o se parecen demasiado. */
+const CONF = [
+  ['harami-alcista', 'tres-dentro-alcista'], ['harami-bajista', 'tres-dentro-bajista'],
+  ['envolvente-alcista', 'tres-fuera-alcista'], ['envolvente-bajista', 'tres-fuera-bajista'],
+  ['cinturon-alcista', 'envolvente-alcista'], ['cinturon-bajista', 'envolvente-bajista'],
+  ['doble-techo', 'triple-techo'], ['doble-piso', 'triple-piso'],
+  ['rebote-soporte', 'doble-piso'], ['rebote-soporte', 'triple-piso'], ['rechazo-resistencia', 'doble-techo'], ['rechazo-resistencia', 'triple-techo'],
+  ['triangulo-sim', 'triangulo-asc'], ['triangulo-sim', 'triangulo-desc'], ['hch', 'triple-techo'], ['hch-inv', 'triple-piso'],
+  ['bebe-abandonado-alcista', 'estrella-doji-manana'], ['bebe-abandonado-bajista', 'estrella-doji-tarde'],
+  ['rect-alcista', 'doble-piso'], ['rect-alcista', 'triple-piso'], ['rect-alcista', 'triangulo-asc'], ['rect-alcista', 'rebote-soporte'],
+  ['rect-bajista', 'doble-techo'], ['rect-bajista', 'triple-techo'], ['rect-bajista', 'triangulo-desc'], ['rect-bajista', 'rechazo-resistencia'],
+  ['taza-asa', 'fondo-redondeado'], ['banderin-alcista', 'triangulo-sim'], ['banderin-bajista', 'triangulo-sim'],
+  ['cuna-descendente', 'bandera-alcista'], ['cuna-ascendente', 'bandera-bajista']
+];
+const confOf = id => CONF.filter(c => c.includes(id)).map(c => c[0] === id ? c[1] : c[0]);
+
+/* ---------- Detectores estrictos de las velas (la definición de cada patrón) ---------- */
+const last = (cs, n) => cs.slice(cs.length - n);
+const T = (cs, n) => ctxT(cs, cs.length - n);
+const harami = (a, b, dn) => (dn ? isDn(a) && isUp(b) : isUp(a) && isDn(b)) && tp(b) < tp(a) && bt(b) > bt(a) && bd(a) >= 1.2 && bd(b) <= 0.5 * bd(a) && bd(b) / rg(b) >= 0.25;
+const engulf = (a, b, up) => bd(b) >= 0.8 && bd(b) / rg(b) >= 0.6 && (up ? isDn(a) && isUp(b) && b.o < a.c && b.c > a.o : isUp(a) && isDn(b) && b.o > a.c && b.c < a.o);
+const DET = {
+  'martillo': cs => { const [a] = last(cs, 1), R = rg(a), B = bd(a); return T(cs, 1) === 'down' && B / R >= 0.08 && B / R <= 0.35 && lw(a) >= 0.6 * R && uw(a) <= 0.1 * R; },
+  'hombre-colgado': cs => { const [a] = last(cs, 1), R = rg(a), B = bd(a); return T(cs, 1) === 'up' && B / R >= 0.08 && B / R <= 0.35 && lw(a) >= 0.6 * R && uw(a) <= 0.1 * R; },
+  'martillo-invertido': cs => { const [a] = last(cs, 1), R = rg(a), B = bd(a); return T(cs, 1) === 'down' && B / R >= 0.08 && B / R <= 0.35 && uw(a) >= 0.6 * R && lw(a) <= 0.1 * R; },
+  'estrella-fugaz': cs => { const [a] = last(cs, 1), R = rg(a), B = bd(a); return T(cs, 1) === 'up' && B / R >= 0.08 && B / R <= 0.35 && uw(a) >= 0.6 * R && lw(a) <= 0.1 * R; },
+  'doji-libelula': cs => { const [a] = last(cs, 1), R = rg(a); return T(cs, 1) === 'down' && bd(a) <= 0.05 * R && lw(a) >= 0.7 * R && uw(a) <= 0.06 * R; },
+  'doji-lapida': cs => { const [a] = last(cs, 1), R = rg(a); return T(cs, 1) === 'up' && bd(a) <= 0.05 * R && uw(a) >= 0.7 * R && lw(a) <= 0.06 * R; },
+  'marubozu-alcista': cs => { const [a] = last(cs, 1), R = rg(a); return T(cs, 1) === 'up' && isUp(a) && bd(a) >= 1.2 && uw(a) <= 0.03 * R && lw(a) <= 0.03 * R; },
+  'marubozu-bajista': cs => { const [a] = last(cs, 1), R = rg(a); return T(cs, 1) === 'down' && isDn(a) && bd(a) >= 1.2 && uw(a) <= 0.03 * R && lw(a) <= 0.03 * R; },
+  'cinturon-alcista': cs => { const [a] = last(cs, 1), R = rg(a); return T(cs, 1) === 'down' && isUp(a) && bd(a) >= 1.2 && lw(a) <= 0.03 * R && uw(a) >= 0.06 * R && uw(a) <= 0.3 * R; },
+  'cinturon-bajista': cs => { const [a] = last(cs, 1), R = rg(a); return T(cs, 1) === 'up' && isDn(a) && bd(a) >= 1.2 && uw(a) <= 0.03 * R && lw(a) >= 0.06 * R && lw(a) <= 0.3 * R; },
+  'envolvente-alcista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && engulf(a, b, true); },
+  'envolvente-bajista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && engulf(a, b, false); },
+  'harami-alcista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && harami(a, b, true); },
+  'harami-bajista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && harami(a, b, false); },
+  'linea-penetrante': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && isDn(a) && bd(a) >= 1.2 && isUp(b) && b.o < a.l && b.c > mid(a) && b.c < a.o; },
+  'nube-oscura': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && isUp(a) && bd(a) >= 1.2 && isDn(b) && b.o > a.h && b.c < mid(a) && b.c > a.o; },
+  'pinza-inferior': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && isDn(a) && isUp(b) && Math.abs(a.l - b.l) < 1e-9; },
+  'pinza-superior': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && isUp(a) && isDn(b) && Math.abs(a.h - b.h) < 1e-9; },
+  'kicker-alcista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && isDn(a) && isUp(b) && bd(a) >= 1.2 && bd(b) >= 1.2 && b.l > a.h; },
+  'kicker-bajista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && isUp(a) && isDn(b) && bd(a) >= 1.2 && bd(b) >= 1.2 && b.h < a.l; },
+  'estrella-manana': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'down' && isDn(a) && bd(a) >= 1.2 && bd(b) / rg(b) >= 0.25 && bd(b) <= 0.3 * bd(a) && b.h < a.c && isUp(c) && c.c > mid(a) && c.c < a.o; },
+  'estrella-tarde': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && isUp(a) && bd(a) >= 1.2 && bd(b) / rg(b) >= 0.25 && bd(b) <= 0.3 * bd(a) && b.l > a.c && isDn(c) && c.c < mid(a) && c.c > a.o; },
+  'estrella-doji-manana': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'down' && isDn(a) && bd(a) >= 1.2 && bd(b) <= 0.1 * rg(b) && rg(b) >= 0.4 && b.h < a.c && isUp(c) && c.c > mid(a) && c.c < a.o; },
+  'estrella-doji-tarde': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && isUp(a) && bd(a) >= 1.2 && bd(b) <= 0.1 * rg(b) && rg(b) >= 0.4 && b.l > a.c && isDn(c) && c.c < mid(a) && c.c > a.o; },
+  'tres-soldados': cs => { const k = last(cs, 3); return T(cs, 3) === 'down' && k.every(x => isUp(x) && bd(x) >= 0.9 && uw(x) <= 0.25 * bd(x)) && k[1].c > k[0].c && k[2].c > k[1].c && k[1].o > k[0].o && k[1].o < k[0].c && k[2].o > k[1].o && k[2].o < k[1].c; },
+  'tres-cuervos': cs => { const k = last(cs, 3); return T(cs, 3) === 'up' && k.every(x => isDn(x) && bd(x) >= 0.9 && lw(x) <= 0.25 * bd(x)) && k[1].c < k[0].c && k[2].c < k[1].c && k[1].o < k[0].o && k[1].o > k[0].c && k[2].o < k[1].o && k[2].o > k[1].c; },
+  'tres-dentro-alcista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'down' && harami(a, b, true) && isUp(c) && c.c > a.o && bd(c) >= 0.8; },
+  'tres-dentro-bajista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && harami(a, b, false) && isDn(c) && c.c < a.o && bd(c) >= 0.8; },
+  'tres-fuera-alcista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'down' && engulf(a, b, true) && isUp(c) && c.c > b.c; },
+  'tres-fuera-bajista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && engulf(a, b, false) && isDn(c) && c.c < b.c; },
+  'tasuki-alcista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && isUp(a) && isUp(b) && b.l > a.h && isDn(c) && c.o < b.c && c.o > b.o && c.c > a.h && c.c < b.l; },
+  'tasuki-bajista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'down' && isDn(a) && isDn(b) && b.h < a.l && isUp(c) && c.o > b.c && c.o < b.o && c.c < a.l && c.c > b.h; },
+  'peonza': cs => { const [a] = last(cs, 1), R = rg(a), B = bd(a), mx = Math.max(uw(a), lw(a)), mn = Math.min(uw(a), lw(a)); return B / R >= 0.1 && B / R <= 0.3 && uw(a) >= 1.2 * B && lw(a) >= 1.2 * B && mn >= 0.6 * mx; },
+  'doji-patas-largas': cs => { const [a] = last(cs, 1), R = rg(a), pa = cs.slice(cs.length - 6, cs.length - 1).reduce((s, x) => s + rg(x), 0) / 5; return bd(a) <= 0.05 * R && uw(a) >= 0.3 * R && lw(a) >= 0.3 * R && R >= 1.5 * pa; },
+  'harami-cruz-alcista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && isDn(a) && bd(a) >= 1.2 && bd(b) <= 0.1 * rg(b) && rg(b) >= 0.4 && tp(b) < tp(a) && bt(b) > bt(a); },
+  'harami-cruz-bajista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && isUp(a) && bd(a) >= 1.2 && bd(b) <= 0.1 * rg(b) && rg(b) >= 0.4 && tp(b) < tp(a) && bt(b) > bt(a); },
+  'contraataque-alcista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'down' && isDn(a) && bd(a) >= 1.2 && isUp(b) && bd(b) >= 0.8 && b.o < a.c && Math.abs(b.c - a.c) <= 0.06; },
+  'contraataque-bajista': cs => { const [a, b] = last(cs, 2); return T(cs, 2) === 'up' && isUp(a) && bd(a) >= 1.2 && isDn(b) && bd(b) >= 0.8 && b.o > a.c && Math.abs(b.c - a.c) <= 0.06; },
+  'separacion-alcista': cs => { const [a, b] = last(cs, 2), R = rg(b); return T(cs, 2) === 'up' && isDn(a) && isUp(b) && Math.abs(b.o - a.o) <= 0.05 && bd(b) >= 1.2 && lw(b) <= 0.03 * R && uw(b) >= 0.06 * R && uw(b) <= 0.3 * R; },
+  'separacion-bajista': cs => { const [a, b] = last(cs, 2), R = rg(b); return T(cs, 2) === 'down' && isUp(a) && isDn(b) && Math.abs(b.o - a.o) <= 0.05 && bd(b) >= 1.2 && uw(b) <= 0.03 * R && lw(b) >= 0.06 * R && lw(b) <= 0.3 * R; },
+  'bebe-abandonado-alcista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'down' && isDn(a) && bd(a) >= 1.2 && bd(b) <= 0.1 * rg(b) && rg(b) >= 0.4 && b.h < a.l && isUp(c) && bd(c) >= 0.8 && c.l > b.h && c.c > mid(a) && c.c < a.o; },
+  'bebe-abandonado-bajista': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && isUp(a) && bd(a) >= 1.2 && bd(b) <= 0.1 * rg(b) && rg(b) >= 0.4 && b.l > a.h && isDn(c) && bd(c) >= 0.8 && c.h < b.l && c.c < mid(a) && c.c > a.o; },
+  'dos-cuervos': cs => { const [a, b, c] = last(cs, 3); return T(cs, 3) === 'up' && isUp(a) && bd(a) >= 1.2 && isDn(b) && bt(b) > a.c && bd(b) <= 0.5 * bd(a) && isDn(c) && c.o > b.o && c.c < b.c && c.c > a.c; },
+  'metodos-alcistas': cs => { const [a, b, c, d, e] = last(cs, 5); return T(cs, 5) === 'up' && isUp(a) && bd(a) >= 1.5 && [b, c, d].every(x => isDn(x) && bd(x) <= 0.35 * bd(a) && x.h <= a.h && x.l >= a.l) && d.c < a.c && isUp(e) && e.c > a.c && e.o > d.c; },
+  'metodos-bajistas': cs => { const [a, b, c, d, e] = last(cs, 5); return T(cs, 5) === 'down' && isDn(a) && bd(a) >= 1.5 && [b, c, d].every(x => isUp(x) && bd(x) <= 0.35 * bd(a) && x.h <= a.h && x.l >= a.l) && d.c > a.c && isDn(e) && e.c < a.c && e.o < d.c; }
+};
+
+const BASES = [18.4, 52.7, 96.2, 143.5, 271.3, 0.62, 1.48, 7.35];
+const TICKS = ['AURX', 'BLTC', 'CRNO', 'DLTA', 'EVRG', 'FLUX', 'GRVN', 'HLIX'];
+const TFS = ['5m', '15m', '1h', '4h', '1d'];
+
+function buildSample(p) {
+  let units, hl = null, lines = [], sf = 1, meta = null;
+  if (p.grp === 'f') { const g = p.gen(); units = g.cs; lines = g.lines; sf = g.sf; meta = g.meta; }
+  else {
+    const pre = trendCandles(18 + Math.floor(rnd() * 6), p.trend === 'rand' ? pickOne(['up', 'down']) : p.trend);
+    const L = pre[pre.length - 1].c;
+    units = pre.concat(p.gen(L)); hl = [units.length - p.n, units.length - 1];
+  }
+  const lastC = units[units.length - 1].c;
+  const bias = p.dir === 'neutral' ? pickOne([1, -1]) : (p.dir === 'up' ? 1 : -1);
+  const fol = p.dir === 'neutral' ? null : rnd() < 0.7;
+  const sign = fol === false ? -bias : bias;
+  const after = [];
+  let q = lastC;
+  for (let i = 0; i < 3; i++) {
+    const c = q + sign * U(0.35, 0.85) + U(-0.1, 0.1);
+    after.push(mk(q, c, U(0.1, 0.3), U(0.1, 0.3)));
+    q = c;
+  }
+  const bi = Math.floor(rnd() * BASES.length), base = BASES[bi], k = base * 0.007;
+  const conv = x => ({ o: base + x.o * k, c: base + x.c * k, h: base + x.h * k, l: base + x.l * k });
+  const cv = v => base + v * k;
+  return {
+    pid: p.id, u: units, uAfter: after, sf, meta,
+    c: units.map(conv), after: after.map(conv), hl,
+    lines: lines.map(l => ({ i1: l.i1, i2: l.i2, v1: cv(l.v1), v2: cv(l.v2), t: l.t, k: l.k })),
+    dec: base < 5 ? 4 : 2, tf: TFS[Math.floor(rnd() * TFS.length)], tk: TICKS[bi], fol
+  };
+}
+
+/* Elige n patrones distintos, favoreciendo los menos dominados */
+function pickPatterns(n, mastery, seenOf, only) {
+  const src = only && only.length >= n ? PATTERNS.filter(p => only.includes(p.id)) : PATTERNS;
+  const pool = src.map(p => ({ p, w: 1 + (1 - mastery(p.id)) * 2 + (seenOf(p.id) === 0 ? 2 : 0) }));
+  const out = [];
+  while (out.length < n && pool.length) {
+    const tot = pool.reduce((s, x) => s + x.w, 0);
+    let r = rnd() * tot, idx = 0;
+    for (; idx < pool.length; idx++) { r -= pool[idx].w; if (r <= 0) break; }
+    idx = Math.min(idx, pool.length - 1);
+    out.push(pool[idx].p);
+    pool.splice(idx, 1);
+  }
+  return out;
+}
+
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* Opciones: solo patrones del mismo tipo (velas o figuras), nunca uno que se confunda con la respuesta. */
+function buildOptions(p) {
+  const bad = confOf(p.id);
+  const pool = PATTERNS.filter(x => x.id !== p.id && x.grp === p.grp && !bad.includes(x.id));
+  const same = shuffle(pool.filter(x => x.dir === p.dir)), other = shuffle(pool.filter(x => x.dir !== p.dir));
+  let d = same.slice(0, 2).concat(other.slice(0, 1));
+  if (d.length < 3) d = d.concat(shuffle(pool.filter(x => !d.includes(x))).slice(0, 3 - d.length));
+  return shuffle([p].concat(d)).map(x => x.id);
+}
+
+if (typeof module !== 'undefined') module.exports = { PATTERNS, PBYID, CONF, confOf, DET, buildSample, pickPatterns, buildOptions, trendCandles, ctxT, mk, ext, shuffle };
+
+/* ===== Velario · interfaz ===== */
+const KEY = 'velario.v1';
+const SECTIONS = [
+  { t: 'Una vela', ids: ['martillo', 'hombre-colgado', 'martillo-invertido', 'estrella-fugaz', 'doji-libelula', 'doji-lapida', 'doji-patas-largas', 'peonza', 'marubozu-alcista', 'marubozu-bajista', 'cinturon-alcista', 'cinturon-bajista'] },
+  { t: 'Dos velas', ids: ['envolvente-alcista', 'envolvente-bajista', 'harami-alcista', 'harami-bajista', 'harami-cruz-alcista', 'harami-cruz-bajista', 'linea-penetrante', 'nube-oscura', 'pinza-inferior', 'pinza-superior'] },
+  { t: 'Dos velas: gaps y contraataques', ids: ['kicker-alcista', 'kicker-bajista', 'contraataque-alcista', 'contraataque-bajista', 'separacion-alcista', 'separacion-bajista'] },
+  { t: 'Tres velas', ids: ['estrella-manana', 'estrella-tarde', 'estrella-doji-manana', 'estrella-doji-tarde', 'bebe-abandonado-alcista', 'bebe-abandonado-bajista', 'tres-soldados', 'tres-cuervos', 'dos-cuervos', 'tres-dentro-alcista', 'tres-dentro-bajista', 'tres-fuera-alcista', 'tres-fuera-bajista'] },
+  { t: 'Continuación con velas', ids: ['tasuki-alcista', 'tasuki-bajista', 'metodos-alcistas', 'metodos-bajistas'] },
+  { t: 'Figuras de reversión', ids: ['doble-techo', 'doble-piso', 'triple-techo', 'triple-piso', 'hch', 'hch-inv', 'cuna-ascendente', 'cuna-descendente', 'fondo-redondeado', 'techo-redondeado'] },
+  { t: 'Figuras de continuación', ids: ['bandera-alcista', 'bandera-bajista', 'banderin-alcista', 'banderin-bajista', 'triangulo-asc', 'triangulo-desc', 'triangulo-sim', 'rect-alcista', 'rect-bajista', 'taza-asa'] },
+  { t: 'Rupturas y niveles', ids: ['ruptura-alcista', 'ruptura-bajista', 'rebote-soporte', 'rechazo-resistencia'] }
+];
+const ORDER = SECTIONS.flatMap(s => s.ids);
+const P = id => PBYID[id];
+const TOTAL = PATTERNS.length;
+const XP_LEVEL = 300;
+const DL = { up: 'Alcista', down: 'Bajista', neutral: 'Neutral' };
+
+function fresh() { return { name: '', xp: 0, cash: 100, streak: 0, best: 0, lastDay: '', sessions: 0, answered: 0, correct: 0, run: 0, bestRun: 0, dirOk: 0, perfect: 0, retos: 0, retoDay: '', pat: {}, done: {}, days: [], recent: [] }; }
+function load() {
+  try {
+    const r = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return fresh();
+    const state = fresh();
+    for (const key of Object.keys(state)) {
+      if (key === 'cash') continue;
+      if (typeof state[key] === 'number') state[key] = Number.isFinite(r[key]) && r[key] >= 0 ? Math.floor(r[key]) : 0;
+      else if (typeof state[key] === 'string') state[key] = typeof r[key] === 'string' ? r[key].slice(0, key === 'name' ? 24 : 40) : '';
+    }
+    state.cash = Number.isFinite(r.cash) && r.cash >= 0 ? Math.round(r.cash * 100) / 100 : 100;
+    state.recent = Array.isArray(r.recent) ? r.recent.filter(id => ORDER.includes(id)).slice(0, 8) : [];
+    state.days = Array.isArray(r.days) ? r.days.filter(day => /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(-30) : [];
+    for (const id of ORDER) {
+      if (r.done?.[id] === true) state.done[id] = true;
+      const p = r.pat?.[id];
+      if (p && Array.isArray(p.hist)) state.pat[id] = { seen: Math.max(0, Number(p.seen) || 0), ok: Math.max(0, Number(p.ok) || 0), hist: p.hist.filter(v => typeof v === 'boolean').slice(-8) };
+    }
+    return state;
+  } catch (e) { return fresh(); }
+}
+let S = load();
+if (typeof S.cash !== 'number' || !Number.isFinite(S.cash)) S.cash = 100;
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
+let billing = { active: false, methods: [], message: 'Comprobando compras…' };
+const DESKTOP_API = 'https://velario-payments.onrender.com';
+window.velarioBilling = {
+  async getStatus() {
+    try {
+      let account = JSON.parse(localStorage.getItem('velario.purchase.account') || 'null');
+      if (!account?.token) {
+        const session = await fetch(DESKTOP_API + '/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json());
+        account = { ...session, apiBaseUrl: DESKTOP_API };
+        localStorage.setItem('velario.purchase.account', JSON.stringify(account));
+      }
+      const status = await fetch(DESKTOP_API + '/api/entitlement', { headers: { Authorization: 'Bearer ' + account.token } }).then(r => r.json());
+      return { active: status.active === true, productId: status.productId, expiresAt: status.expiresAt, methods: Object.entries(status.methods || {}).filter(([, ok]) => ok).map(([id]) => id), message: status.active ? 'Velario Pro activo.' : 'Versión gratuita: nivel 1.' };
+    } catch { return { active: false, methods: [], message: 'No se pudo conectar con el servidor de pagos.' }; }
+  },
+  restore() { return this.getStatus(); },
+  async purchase(method) {
+    const account = JSON.parse(localStorage.getItem('velario.purchase.account') || 'null');
+    if (!account?.token) { await this.getStatus(); }
+    const saved = JSON.parse(localStorage.getItem('velario.purchase.account') || 'null');
+    const result = await fetch(DESKTOP_API + '/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + saved.token }, body: JSON.stringify({ method }) }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.message || d.error || 'No se pudo iniciar el pago.'); return d; });
+    window.open(result.url, '_blank');
+    return { ...(await this.getStatus()), message: 'Completa el pago seguro y vuelve a restaurar la compra.' };
+  },
+  async manage() { const s = await this.getStatus(); return s; }
+};
+let billingBusy = false;
+const isPro = () => billing.active === true && billing.productId === 'velario.pro.weekly' && Date.parse(billing.expiresAt) > Date.now();
+const canAccess = id => ORDER.includes(id) && (isPro() || ORDER.indexOf(id) === 0);
+const proPrice = '2 USD/semana';
+const billingBridge = () => window.velarioNative || window.velarioBilling;
+function applyBilling(value) {
+  try { if (typeof value === 'string') value = JSON.parse(value); } catch { value = {}; }
+  billing = value && typeof value === 'object' ? value : {};
+  if (!Array.isArray(billing.methods)) billing.methods = Object.keys(billing.methods || {}).filter(key => billing.methods[key] === true);
+  else billing.methods = billing.methods.map(item => typeof item === 'string' ? item : item?.enabled ? item.id : null).filter(Boolean);
+  render();
+  if (OV?.mode === 'paywall' || (OV?.mode === 'detail' && !canAccess(OV.id)) || (OV?.mode === 'sess' && SS && !canAccess(SS.qs[SS.i]?.pid))) showPaywall();
+}
+async function refreshBilling(restore = false) {
+  if (billingBusy) return;
+  billingBusy = true;
+  try {
+    const bridge = billingBridge();
+    if (!bridge) { applyBilling({ active: false, methods: [], message: 'Las compras todavía no están habilitadas en esta edición.' }); return; }
+    const value = await (restore && bridge.restore ? bridge.restore() : bridge.getStatus());
+    if (value) applyBilling(value);
+  } catch { applyBilling({ active: false, methods: [], message: 'No se pudo verificar Pro. Conéctate y vuelve a restaurar tus compras.' }); }
+  finally { billingBusy = false; }
+}
+/* El catálogo de métodos es dinámico: manda lo que el servidor declare configurado.
+   Si el servidor no reporta ninguno, se enseña el catálogo completo en gris para que el
+   estado de la configuración sea visible en lugar de una pantalla sin opciones. */
+const PAYWALL_METHODS = ['card', 'applepay', 'googlepay', 'link', 'paypal', 'play', 'cashapp', 'us_bank_account', 'klarna', 'amazonpay'];
+const PAYWALL_LABELS = {
+  card: 'Tarjeta de crédito/débito', applepay: 'Apple Pay', googlepay: 'Google Pay', link: 'Link',
+  paypal: 'PayPal', play: 'Google Play', cashapp: 'Cash App', us_bank_account: 'Transferencia bancaria (ACH)',
+  klarna: 'Klarna', amazonpay: 'Amazon Pay'
+};
+function showPaywall() {
+  OV = { mode: 'paywall' };
+  const enabled = (Array.isArray(billing.methods) ? billing.methods : []).filter(id => typeof id === 'string');
+  const choices = enabled.length ? enabled : [...PAYWALL_METHODS];
+  const buttons = choices.map(id => '<button class="btn ghost block" data-act="purchase" data-method="' + id + '" ' + (billingBusy || !enabled.includes(id) ? 'disabled' : '') + '>' + esc(PAYWALL_LABELS[id] || id) + '</button>').join('');
+  ov().innerHTML = '<div class="ov"><div class="ovtop"><button class="x" data-act="close" aria-label="Cerrar">' + ic('x') + '</button><span class="eyebrow">Velario Pro</span></div><h1>Desbloquea toda la ruta</h1><p class="muted">La versión normal incluye la primera lección y se mantiene en el nivel 1. Pro desbloquea todos los patrones, lecciones, biblioteca y prácticas.</p><div class="card stack"><div class="row between"><b>Pro</b><b class="mono">' + proPrice + '</b></div><p class="note">Suscripción de renovación automática cada semana. Puedes cancelarla desde tu proveedor de pagos. Apple Pay aparece en el pago seguro cuando el dispositivo y la cuenta lo admiten.</p><p class="billing-message" role="status" aria-live="polite">' + esc(billing.message || (isPro() ? 'Velario Pro activo.' : 'Elige un método disponible.')) + '</p><div class="stack" style="gap:8px">' + buttons + '</div><button class="btn ghost block" data-act="restore">Restaurar compras</button><button class="btn ghost block" data-act="close">Volver</button></div></div>';
+  openOv();
+}
+async function requestPurchase(method) {
+  if (billingBusy || !billing.methods.includes(method)) return;
+  billingBusy = true; showPaywall();
+  try {
+    const bridge = billingBridge();
+    const result = await bridge.purchase(window.velarioNative ? method : 'velario.pro.weekly');
+    if (result) applyBilling(result);
+  } catch (error) { billing.message = error.message || 'No se pudo iniciar la compra. Vuelve a intentarlo.'; }
+  finally { billingBusy = false; if (OV?.mode === 'paywall') showPaywall(); }
+}
+const dayStr = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const mastery = id => { const h = (S.pat[id] && S.pat[id].hist) || []; return h.length ? h.slice(-5).filter(Boolean).length / 5 : 0; };
+const seenOf = id => (S.pat[id] && S.pat[id].seen) || 0;
+const level = () => isPro() ? 1 + Math.floor(S.xp / XP_LEVEL) : 1;
+function addXP(amount) { const before = S.xp; S.xp = isPro() ? before + amount : before < XP_LEVEL ? Math.min(XP_LEVEL - 1, before + amount) : before; return S.xp - before; }
+const doneCount = () => ORDER.filter(id => S.done[id]).length;
+const curIdx = () => { const i = ORDER.findIndex(id => !S.done[id]); return i < 0 ? ORDER.length : i; };
+const dominio = () => Math.round(100 * PATTERNS.reduce((s, p) => s + mastery(p.id), 0) / TOTAL);
+const dominated = () => PATTERNS.filter(p => mastery(p.id) >= 0.8).length;
+const seenCount = () => PATTERNS.filter(p => seenOf(p.id) > 0 || S.done[p.id]).length;
+const pushRecent = id => { S.recent = [id].concat(S.recent.filter(x => x !== id)).slice(0, 8); };
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function touchDay() {
+  const t = dayStr();
+  if (S.lastDay !== t) {
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    S.streak = S.lastDay === dayStr(y) ? S.streak + 1 : 1;
+    S.lastDay = t;
+  }
+  S.best = Math.max(S.best, S.streak);
+  if (!S.days.includes(t)) { S.days.push(t); S.days = S.days.slice(-30); }
+}
+
+/* ---------- iconos ---------- */
+const IC = {
+  home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>',
+  book: '<path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2zM12 6v14"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  flame: '<path d="M12 3c1 4 5 6 5 11a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/>',
+  bolt: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+  path: '<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 000-6h-4a3 3 0 010-6h6"/>',
+  shuffle: '<path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>',
+  grid: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+  up: '<path d="M4 16l6-6 4 4 6-7"/>', down: '<path d="M4 8l6 6 4-4 6 7"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-.8.6-1.5 1-1.5 2M12 17v.5"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/>',
+  calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
+  crown: '<path d="M4 18h16M5 18L3.5 8 9 12l3-6 3 6 5.5-4L19 18z"/>',
+  spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  dumb: '<path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/>'
+};
+const ic = (n, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+
+/* ---------- gráficas ---------- */
+function fmt(v, d) { return v.toFixed(d); }
+function chart(sm, reveal, h) {
+  const cs = reveal ? sm.c.concat(sm.after) : sm.c, nPre = sm.c.length;
+  const W = 360, H = h || 250, pl = 6, pr = 54, pt = 14, pb = 14;
+  const showLines = sm.lines && sm.lines.length && sm.showHl !== false;
+  let mn = Infinity, mx = -Infinity;
+  cs.forEach(x => { mn = Math.min(mn, x.l); mx = Math.max(mx, x.h); });
+  if (showLines) sm.lines.forEach(l => { mn = Math.min(mn, l.v1, l.v2); mx = Math.max(mx, l.v1, l.v2); });
+  const pad = (mx - mn) * 0.08; mn -= pad; mx += pad;
+  const y = v => pt + (mx - v) / (mx - mn) * (H - pt - pb);
+  const n = cs.length, st = (W - pl - pr) / n, cw = Math.max(2.4, st * 0.56), X = i => pl + st * (i + 0.5);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfica de velas simulada">`;
+  for (let i = 0; i < 4; i++) {
+    const v = mx - (mx - mn) * i / 3, yy = y(v);
+    s += `<line class="g" x1="${pl}" x2="${W - pr + 4}" y1="${yy}" y2="${yy}"/><text class="t" x="${W - 4}" y="${yy + 3.5}" text-anchor="end">${fmt(v, sm.dec)}</text>`;
+  }
+  if (sm.hl && sm.showHl !== false) s += `<rect class="hl" x="${pl + st * sm.hl[0] + st * 0.02}" y="${pt - 6}" width="${st * (sm.hl[1] - sm.hl[0] + 1) - st * 0.04}" height="${H - pt - pb + 12}" rx="5"/>`;
+  cs.forEach((x, i) => {
+    const cx = X(i), cls = x.c >= x.o ? 'up' : 'dn';
+    const nw = i >= nPre ? ` nw" style="animation-delay:${(i - nPre) * 0.18}s` : '';
+    const top = y(Math.max(x.o, x.c)), bot = y(Math.min(x.o, x.c));
+    s += `<g class="${cls}${nw}"><line x1="${cx}" x2="${cx}" y1="${y(x.h)}" y2="${y(x.l)}" stroke-width="${n > 30 ? 1 : 1.4}"/><rect x="${cx - cw / 2}" y="${top}" width="${cw}" height="${Math.max(1.4, bot - top)}" rx="${n > 30 ? 0.6 : 1.2}" stroke-width="0.5"/></g>`;
+  });
+  if (showLines) sm.lines.forEach(l => {
+    const x1 = X(l.i1), x2 = X(l.i2), y1 = y(l.v1), y2 = y(l.v2);
+    s += `<line class="ln" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    if (l.t) s += `<text class="lt" x="${Math.min(x1 + 3, W - pr - 40)}" y="${y1 < pt + 12 ? y1 + 12 : y1 - 5}">${l.t}</text>`;
+  });
+  return s + '</svg>';
+}
+const GL = {};
+function glyph(id, size) {
+  const key = id + '|' + size;
+  if (GL[key]) return GL[key];
+  const p = P(id), pre = p.grp === 'f' ? [] : trendCandles(p.n < 3 ? 3 : 2, p.trend === 'rand' ? 'down' : p.trend), cs = p.grp === 'f' ? p.gen().cs : pre.concat(p.gen(pre[pre.length - 1].c)), W = 64, H = 52, many = cs.length > 10;
+  let mn = Math.min(...cs.map(c => c.l)), mx = Math.max(...cs.map(c => c.h));
+  const y = v => 5 + (mx - v) / (mx - mn) * (H - 10), st = many ? (W - 6) / cs.length : W / (cs.length + 0.8), cw = many ? Math.max(0.9, st * 0.6) : Math.min(14, st * 0.55);
+  let s = `<svg class="glyph" viewBox="0 0 ${W} ${H}" width="${size || 64}" height="${(size || 64) * H / W}" aria-hidden="true">`;
+  cs.forEach((x, i) => {
+    const cx = many ? 3 + st * (i + 0.5) : st * (i + 0.9), up = x.c >= x.o, t = y(Math.max(x.o, x.c)), b = y(Math.min(x.o, x.c));
+    s += `<g style="stroke:var(--${up ? 'up' : 'down'});fill:var(--${up ? 'up' : 'down'})"><line x1="${cx}" x2="${cx}" y1="${y(x.h)}" y2="${y(x.l)}" stroke-width="${many ? 0.8 : 2}"/><rect x="${cx - cw / 2}" y="${t}" width="${cw}" height="${Math.max(many ? 0.9 : 2, b - t)}" rx="${many ? 0.3 : 2}"/></g>`;
+  });
+  return GL[key] = s + '</svg>';
+}
+const dirPill = d => d === 'up' ? `<span class="pill up">${ic('up')} Sesgo alcista</span>` : d === 'down' ? `<span class="pill dn">${ic('down')} Sesgo bajista</span>` : `<span class="pill">Sin sesgo propio</span>`;
+
+/* ---------- insignias: 10 familias x 10 niveles ---------- */
+const BF = [
+  { id: 'racha', t: 'Constancia', sub: 'días', ic: 'flame', sh: 'hex', th: [2, 3, 5, 7, 10, 14, 21, 30, 60, 100], cur: () => Math.max(S.streak, S.best), how: 'Días seguidos con al menos una respuesta.' },
+  { id: 'perf', t: 'Sin fallos', sub: 'perfectas', ic: 'star', sh: 'burst', th: [1, 3, 5, 10, 15, 25, 40, 60, 80, 100], cur: () => S.perfect, how: 'Sesiones terminadas con todas las respuestas correctas.' },
+  { id: 'reto', t: 'Reto diario', sub: 'retos', ic: 'calendar', sh: 'circle', th: [1, 3, 5, 7, 10, 15, 20, 30, 50, 100], cur: () => S.retos, how: 'Días en que terminaste el reto de hoy.' },
+  { id: 'ses', t: 'Entrenador', sub: 'sesiones', ic: 'dumb', sh: 'squircle', th: [1, 3, 5, 10, 20, 30, 50, 75, 100, 150], cur: () => S.sessions, how: 'Sesiones terminadas, de lección o de práctica.' },
+  { id: 'ac', t: 'Buen ojo', sub: 'aciertos', ic: 'check', sh: 'shield', th: [10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500], cur: () => S.correct, how: 'Respuestas correctas acumuladas.' },
+  { id: 'run', t: 'Encadenados', sub: 'seguidas', ic: 'bolt', sh: 'octo', th: [3, 5, 8, 10, 15, 20, 30, 40, 50, 75], cur: () => S.bestRun, how: 'Mayor cantidad de aciertos seguidos sin fallar.' },
+  { id: 'dir', t: 'Rumbo', sub: 'direcciones', ic: 'up', sh: 'diamond', th: [5, 10, 25, 50, 100, 150, 250, 400, 600, 1000], cur: () => S.dirOk, how: 'Aciertos en las preguntas de Sube o Baja.' },
+  { id: 'exp', t: 'Explorador', sub: 'patrones vistos', ic: 'eye', sh: 'penta', th: [3, 6, 10, 15, 20, 28, 35, 42, 46, TOTAL], cur: () => seenCount(), how: 'Patrones distintos que ya has visto o respondido.' },
+  { id: 'les', t: 'Aprendiz', sub: 'lecciones', ic: 'book', sh: 'arch', th: [1, 3, 5, 10, 15, 20, 30, 40, 45, TOTAL], cur: () => doneCount(), how: 'Lecciones superadas de la ruta.' },
+  { id: 'dom', t: 'Maestría', sub: 'dominados', ic: 'crown', sh: 'scallop', th: [1, 3, 5, 10, 15, 20, 30, 40, 45, TOTAL], cur: () => dominated(), how: 'Patrones con 4 de los últimos 5 intentos correctos.' }
+];
+function tierOf(f) { const c = f.cur(); let t = 0; while (t < 10 && c >= f.th[t]) t++; return { t, c, next: t < 10 ? f.th[t] : null, shown: f.th[Math.max(0, t - 1)] }; }
+const earnedCount = () => BF.reduce((s, f) => s + tierOf(f).t, 0);
+const SHAPES = {
+  hex: 'M36 5l26 15v32L36 67 10 52V20z', circle: 'M36 6a30 30 0 100 60 30 30 0 000-60z', squircle: 'M20 8h32a12 12 0 0112 12v32a12 12 0 01-12 12H20A12 12 0 018 52V20A12 12 0 0120 8z',
+  shield: 'M10 9h52v28c0 15-12 24-26 30C22 61 10 52 10 37z', octo: 'M24 6h24l18 18v24L48 66H24L6 48V24z', diamond: 'M36 4l30 32-30 32L6 36z',
+  penta: 'M36 5l28 21-11 34H19L8 26z', arch: 'M10 66V34a26 26 0 0152 0v32z',
+  burst: (() => { let d = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? 26 : 31; d += (i ? 'L' : 'M') + (36 + r * Math.sin(a)).toFixed(1) + ' ' + (36 - r * Math.cos(a)).toFixed(1); } return d + 'z'; })(),
+  scallop: (() => { let d = ''; for (let i = 0; i < 24; i++) { const a = i * Math.PI / 12, r = i % 2 ? 27 : 31; d += (i ? 'L' : 'M') + (36 + r * Math.sin(a)).toFixed(1) + ' ' + (36 - r * Math.cos(a)).toFixed(1); } return d + 'z'; })()
+};
+function badgeSVG(f, tier, locked) {
+  return `<svg viewBox="0 0 72 72" aria-hidden="true"><path d="${SHAPES[f.sh]}" class="bshape${locked ? ' lk' : ''}" stroke-linejoin="round"/><path d="${SHAPES[f.sh]}" class="binner" transform="translate(36 36) scale(.8) translate(-36 -36)" stroke-linejoin="round"/><g class="bic${locked ? ' lk' : ''}" transform="translate(30 14) scale(.5)" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${IC[f.ic]}</g><text x="36" y="42" text-anchor="middle" class="bnum${locked ? ' lk' : ''}">${tier}</text><text x="36" y="53" text-anchor="middle" class="bsub${locked ? ' lk' : ''}">${f.sub.toUpperCase().slice(0, 12)}</text></svg>`;
+}
+
+/* ---------- filas de patrón ---------- */
+function prow(p, dots) {
+  const m = Math.round(mastery(p.id) * 5);
+  return `<button class="prow" data-act="detail" data-id="${p.id}"><div class="gl ${p.dir}">${glyph(p.id, 64)}</div><div class="pm"><div class="eb ${p.dir}">${CAT[p.cat]} · ${DL[p.dir]}</div><h3>${p.name}</h3><p>${p.text}</p>${dots ? `<span class="dots" aria-label="Dominio ${m} de 5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < m ? 'on' : ''}"></i>`).join('')}</span>` : ''}</div>${ic('arrow')}</button>`;
+}
+
+/* ---------- vistas ---------- */
+let tab = 'inicio', sub = 'ruta', filt = 'todos', libQ = '', heroSm = null;
+const practiceBtn = () => doneCount() ? 'data-act="practice"' : `data-act="lesson" data-id="${ORDER[0]}"`;
+
+function viewInicio() {
+  const idx = curIdx(), next = idx < ORDER.length ? P(ORDER[idx]) : null;
+  if (!heroSm) heroSm = buildSample(P(['martillo', 'envolvente-alcista', 'estrella-fugaz', 'estrella-manana', 'doji-libelula', 'harami-bajista'][Math.floor(Math.random() * 6)]));
+  const hs = Object.assign({}, heroSm, { showHl: false });
+  const near = BF.map(f => Object.assign({ f }, tierOf(f))).filter(x => x.t < 10).sort((a, b) => b.c / b.next - a.c / a.next)[0];
+  const into = S.xp % XP_LEVEL, learned = doneCount();
+  const C = 2 * Math.PI * 46, dom = dominio(), today = S.retoDay === dayStr();
+  const rec = S.recent.filter(canAccess).slice(0, 3);
+  return `<div class="stack">
+  <div class="top"><div><h1>Hola${S.name ? ', ' + esc(S.name) : ''}</h1><p class="muted sub">${S.streak > 1 ? 'Sigamos con tu racha.' : 'Cinco velas al día bastan.'}</p></div>
+  <div class="stats-mini"><span class="row" style="gap:6px;color:var(--accent-fg)">${ic('flame')}${S.streak} ${S.streak === 1 ? 'día' : 'días'}</span><span class="row" style="gap:6px">${ic('bolt')}Nivel ${level()}</span><span class="row cash-mini" style="gap:6px">💰 ${dinero(S.cash)}</span><div class="bar" style="width:92px"><i style="width:${into / XP_LEVEL * 100}%"></i></div></div></div>
+  ${!isPro() ? `<button class="card tap" data-act="pro"><span>${ic('crown')}</span><div style="flex:1"><h3>Velario Pro · ${proPrice}</h3><p class="muted">Todos los patrones, lecciones y niveles.</p></div>${ic('arrow')}</button>` : ''}
+  ${next ? `<button class="card tap" data-act="lesson" data-id="${next.id}"><div class="gl">${glyph(next.id, 56)}</div><div style="flex:1;min-width:0"><div class="eyebrow">Tu siguiente lección</div><h3 style="margin-top:4px">${next.name}</h3></div>${ic('arrow')}</button>` : `<div class="card"><div class="eyebrow">Ruta completa</div><h3 style="margin-top:4px">Ya viste los ${TOTAL} patrones. Sigue con la práctica.</h3></div>`}
+  <div class="card"><div class="row" style="align-items:stretch;gap:14px"><div class="stack" style="flex:1.1;gap:12px;justify-content:space-between;min-width:0"><div><div class="eyebrow" style="color:var(--accent-fg)">Reto de hoy</div><h2 style="margin-top:6px">${doneCount() ? (today ? 'Reto de hoy completado' : '¿Qué patrón hay al final?') : 'Empieza por tu primera lección'}</h2></div><button class="btn" ${practiceBtn()}>${doneCount() ? (today ? 'Otra ronda' : 'Empezar') : 'Ir a la lección'}</button></div><div class="hero-chart" style="flex:1;min-width:0;display:flex;align-items:center">${chart(hs, false, 190)}</div></div></div>
+  <div class="pair"><button class="card" ${practiceBtn()}>${ic('shuffle')}<h3>Práctica</h3><span class="muted">Cinco gráficas nuevas</span></button><button class="card" data-act="goLib">${ic('book')}<h3>Biblioteca</h3><span class="muted">${TOTAL} patrones</span></button></div>
+  ${near ? `<button class="card tap" data-act="badges"><div style="width:68px;flex:none" class="badge">${badgeSVG(near.f, near.next, true)}</div><div style="flex:1;min-width:0"><div class="eyebrow">Próxima insignia</div><h3 style="margin-top:4px">${near.f.t} ${near.next}</h3><div class="row between muted" style="margin:6px 0 8px;font-size:13px"><span style="text-transform:uppercase;font-size:11px;letter-spacing:.08em">${near.f.sub}</span><span class="mono">${Math.min(near.c, near.next)} de ${near.next}</span></div><div class="bar"><i style="width:${Math.min(1, near.c / near.next) * 100}%"></i></div></div></button>` : ''}
+  <div class="row between"><h2>Progreso</h2><button class="link" data-act="goPerfil" style="padding:4px">Ver todo</button></div>
+  <div class="card ring"><svg viewBox="0 0 112 112" role="img" aria-label="Dominio ${dom}%"><circle cx="56" cy="56" r="46" fill="none" stroke="var(--surface2)" stroke-width="12"/><circle cx="56" cy="56" r="46" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C * dom / 100} ${C}" transform="rotate(-90 56 56)"/><text class="num" x="56" y="58" text-anchor="middle">${dom}%</text><text x="56" y="76" text-anchor="middle" font-size="11" fill="var(--muted)">Dominio</text></svg>
+  <div class="kv"><div><small>Patrones aprendidos</small><br><b>${learned}</b> <small class="mono">/ ${TOTAL}</small></div><div style="border-top:1px solid var(--line);padding-top:10px"><small>Aciertos</small><br><b>${S.correct}</b> <small class="mono">/ ${S.answered}</small></div></div></div>
+  ${rec.length ? `<div class="row between"><h2>Patrones recientes</h2><button class="link" data-act="goLib" style="padding:4px">Ver todo</button></div><div class="stack" style="gap:10px">${rec.map(id => prow(P(id), false)).join('')}</div>` : ''}
+  <p class="note">Material educativo con gráficas simuladas. No es asesoría financiera ni una predicción de precios reales.</p></div>`;
+}
+
+function weekDots() {
+  const d = new Date(); const dow = (d.getDay() + 6) % 7; const out = [];
+  for (let i = 0; i < 7; i++) { const x = new Date(d); x.setDate(d.getDate() - dow + i); out.push(S.days.includes(dayStr(x))); }
+  return out;
+}
+function libFiltered() {
+  const q = norm(libQ.trim());
+  return PATTERNS.filter(p => {
+    if (!canAccess(p.id)) return false;
+    if (filt === 'alc' && p.dir !== 'up') return false;
+    if (filt === 'baj' && p.dir !== 'down') return false;
+    if (filt === 'vel' && p.grp !== 'c') return false;
+    if (filt === 'for' && p.grp !== 'f') return false;
+    return !q || norm(p.name).includes(q) || norm(CAT[p.cat]).includes(q);
+  });
+}
+function libListHTML() {
+  const list = libFiltered();
+  return `<h2 id="libCount">${libQ.trim() ? list.length + (list.length === 1 ? ' resultado' : ' resultados') : (filt === 'todos' ? 'Todos los patrones' : list.length + ' patrones')}</h2>` +
+    (list.length ? `<div class="stack" style="gap:10px">${list.map(p => prow(p, true)).join('')}</div>` : `<div class="card muted">Ningún patrón coincide con tu búsqueda.</div>`);
+}
+function viewAprende() {
+  const seg = `<div class="seg"><button data-act="sub" data-v="ruta" aria-pressed="${sub === 'ruta'}">${ic('path')} Ruta</button><button data-act="sub" data-v="lib" aria-pressed="${sub === 'lib'}">${ic('book')} Biblioteca</button></div>`;
+  if (sub === 'lib') {
+    return `${seg}<div class="stack"><label class="search">${ic('search')}<input id="libq" type="search" placeholder="Buscar patrones…" value="${esc(libQ)}" autocomplete="off" aria-label="Buscar patrones"></label>
+    <div class="chips">${[['todos', 'Todos'], ['alc', 'Alcistas'], ['baj', 'Bajistas'], ['vel', 'Velas'], ['for', 'Figuras']].map(([k, l]) => `<button data-act="filt" data-v="${k}" aria-pressed="${filt === k}">${l}</button>`).join('')}</div>
+    <div class="stack" id="libList">${libListHTML()}</div>${!isPro() ? '<button class="btn block" data-act="pro">Desbloquear la biblioteca completa</button>' : ''}</div>`;
+  }
+  const idx = curIdx();
+  const rev = ORDER.filter(id => S.done[id] && canAccess(id)).sort((a, b) => mastery(a) - mastery(b))[0];
+  const wk = weekDots();
+  let n = 0, html = '';
+  SECTIONS.forEach((sec, si) => {
+    const dn = sec.ids.filter(id => S.done[id]).length;
+    html += `<div class="sec"><div class="card"><h3>${si + 1}. ${sec.t}</h3><div class="secbar">${sec.ids.map(id => `<i class="${S.done[id] ? 'on' : ''}"></i>`).join('')}<span>${dn} / ${sec.ids.length}</span></div></div><div class="path">`;
+    sec.ids.forEach(id => {
+      const i = n++, p = P(id), premium = !canAccess(id), st = premium ? 'lock' : S.done[id] ? 'done' : (i === idx ? 'now' : 'lock'), dx = [0, 56, 0, -56][i % 4];
+      html += `<button class="node ${st}" style="--dx:${dx}px" ${premium ? 'data-act="pro" aria-label="Desbloquear ' + esc(p.name) + ' con Pro"' : st === 'lock' ? 'disabled' : `data-act="lesson" data-id="${id}"`}><span class="dot">${st === 'done' ? ic('check') : st === 'now' ? glyph(id, 48) : ic('lock')}</span><span class="lbl">${p.name}</span>${st === 'now' ? `<span class="here">Estás aquí ${ic('arrow')}</span>` : ''}</button>`;
+    });
+    html += '</div></div>';
+  });
+  return `${seg}<div class="stack"><h1>Ruta de aprendizaje</h1><p class="muted">Cada lección abre la siguiente. Tu próximo paso está marcado.</p>
+  <div class="card stack" style="gap:12px"><div class="muted" style="font-size:14px">Días activos esta semana: ${wk.filter(Boolean).length} de 7</div><div class="week">${wk.map(o => `<i class="${o ? 'on' : ''}"></i>`).join('')}</div>${rev ? `<button class="row between" data-act="detail" data-id="${rev}" style="border:0;background:none;padding:6px 0;text-align:left"><span class="row">${ic('shuffle')} Repasar: ${P(rev).name}</span>${ic('arrow')}</button>` : ''}</div>
+  ${html}</div>`;
+}
+
+function viewPerfil() {
+  const top = BF.map(f => Object.assign({ f }, tierOf(f))).sort((a, b) => b.t - a.t || b.c / (b.next || 1) - a.c / (a.next || 1)).slice(0, 6);
+  return `<div class="stack"><div class="top" style="margin-bottom:0"><div><h1>Tu progreso</h1><p class="muted sub">${seenCount()} de ${TOTAL} patrones vistos.</p></div></div>
+  <div class="card stack"><label class="eyebrow" for="nm">Tu nombre (opcional)</label><input id="nm" type="text" maxlength="24" value="${esc(S.name)}" placeholder="Cómo te saludo"></div>
+  <div class="card stack"><h2>${isPro() ? 'Velario Pro activo' : 'Versión gratuita · nivel 1'}</h2><p class="muted">${isPro() ? 'Tienes acceso a todo el contenido.' : 'Desbloquea todos los niveles por ' + proPrice + '.'}</p><button class="btn" data-act="pro">${isPro() ? 'Ver suscripción' : 'Conocer Pro'}</button><button class="btn ghost" data-act="restore">Restaurar compras</button>${isPro() ? '<button class="btn ghost" data-act="manage">Gestionar o cancelar suscripción</button>' : ''}</div>
+  <div class="card"><div class="row between" style="margin-bottom:12px"><span class="eyebrow">Insignias · ${earnedCount()} / 100</span><button class="link" data-act="badges" style="padding:0">Ver todas</button></div><div class="badges">${top.map(x => `<div class="badge ${x.t ? '' : 'off'}">${badgeSVG(x.f, x.t ? x.shown : x.f.th[0], !x.t)}<b>${x.f.t}</b><span>${x.t}/10</span></div>`).join('')}</div></div>
+  <div class="card"><div class="row between" style="margin-bottom:12px"><span class="eyebrow">Mapa de patrones</span><span class="mono">${dominated()} dominados</span></div><div class="map">${PATTERNS.map(p => { const m = mastery(p.id); return `<i class="${seenOf(p.id) === 0 ? '' : m >= 0.8 ? 'l3' : m >= 0.4 ? 'l2' : 'l1'}" title="${p.name}"></i>`; }).join('')}</div><p class="note" style="margin-top:10px">Más intenso significa más aciertos recientes. Domina un patrón con 4 de sus últimos 5 intentos.</p></div>
+  <div class="tiles"><div class="stat">${ic('flame')}<b>${S.streak}</b><span class="muted">Días de racha</span></div><div class="stat">${ic('bolt')}<b>${level()}</b><span class="muted">${XP_LEVEL - S.xp % XP_LEVEL} XP para el nivel ${level() + 1}</span></div><div class="stat"><b>${dominio()}%</b><span class="muted">Dominio</span></div><div class="stat"><b>${S.correct} / ${S.answered}</b><span class="muted">Aciertos</span></div></div>
+  <div class="card stack"><div id="rstBox"><button class="btn ghost block" data-act="reset">Borrar mi progreso</button></div></div></div>`;
+}
+
+function render() {
+  const root = document.getElementById('view');
+  root.innerHTML = tab === 'inicio' ? viewInicio() : tab === 'aprende' ? viewAprende() : viewPerfil();
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
+}
+function go(t) { tab = t; try { history.replaceState(null, '', '#' + t); } catch (e) { } render(); window.scrollTo(0, 0); }
+
+/* ---------- overlay: detalle, sesiones e insignias ---------- */
+let OV = null;
+const ov = () => document.getElementById('overlay');
+let previousFocus;
+function openOv() {
+  if (ov().hidden) previousFocus = document.activeElement;
+  ov().hidden = false; document.body.style.overflow = 'hidden';
+  ov().setAttribute('role', 'dialog'); ov().setAttribute('aria-modal', 'true'); ov().setAttribute('aria-label', 'Velario');
+  document.querySelector('.wrap').inert = true; document.querySelector('.tabs').inert = true;
+  ov().querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
+}
+function closeOv() { ov().hidden = true; ov().innerHTML = ''; document.body.style.overflow = ''; OV = null; SS = null; document.querySelector('.wrap').inert = false; document.querySelector('.tabs').inert = false; render(); previousFocus?.focus?.(); }
+
+function showBadges(help) {
+  OV = { mode: 'badges' };
+  const near = BF.map(f => Object.assign({ f }, tierOf(f))).filter(x => x.t < 10).sort((a, b) => b.c / b.next - a.c / a.next)[0];
+  ov().innerHTML = `<div class="ov"><div class="ovtop"><button class="x" data-act="close" aria-label="Volver">${ic('back')}</button><h1 style="font-size:26px">Insignias</h1></div>
+  ${near ? `<div class="card"><div class="row" style="gap:14px"><div style="width:76px;flex:none" class="badge">${badgeSVG(near.f, near.next, true)}</div><div style="flex:1;min-width:0"><div class="row between"><span class="eyebrow">Próxima insignia</span><button class="link" data-act="help" aria-label="Cómo funcionan" style="padding:0;color:var(--muted)">${ic('help')}</button></div><h3 style="margin-top:6px">${near.f.t} ${near.next}</h3><div class="row between muted" style="margin:6px 0 8px;font-size:13px"><span style="text-transform:uppercase;font-size:11px;letter-spacing:.08em">${near.f.sub}</span><span class="mono">${Math.min(near.c, near.next)} de ${near.next}</span></div><div class="bar"><i style="width:${Math.min(1, near.c / near.next) * 100}%"></i></div></div></div>${help ? `<p class="note" style="margin-top:12px">Cada insignia tiene 10 niveles. Sube de nivel al llegar a la meta que marca la barra; después se fija una meta más alta.</p>` : ''}</div>` : ''}
+  <div class="row between"><span class="eyebrow">Insignias ganadas</span><b class="mono">${earnedCount()} / 100</b></div>
+  <div class="bgrid">${BF.map(f => { const x = tierOf(f); return `<div class="badge ${x.t ? '' : 'off'}">${badgeSVG(f, x.t ? x.shown : f.th[0], !x.t)}<b class="bn">${f.t}</b><div class="bar" style="width:100%"><i style="width:${x.t * 10}%"></i></div><span class="mono">${x.t}/10</span><span class="how">${f.how}</span></div>`; }).join('')}</div></div>`;
+  openOv(); ov().scrollTop = 0;
+}
+
+function teachHTML(p, sm) {
+  return `<div class="chartbox">${chart(sm, true)}<span class="tag">Simulado · ${sm.tk} · ${sm.tf}</span></div>
+  <div class="row between" style="flex-wrap:wrap"><h2>${p.name}</h2>${dirPill(p.dir)}</div>
+  <p>${p.text}</p><div class="key"><b>Conclusión clave</b>${p.takeaway}</div>
+  <div class="warn"><b>${ic('alert')} Cuándo falla</b>${p.fails}</div>
+  <details open><summary>Qué buscar</summary><ul class="look">${p.look.map(l => `<li>${l}</li>`).join('')}</ul></details>
+  ${p.grp === 'f' ? `<p class="note">Las líneas punteadas del gráfico marcan los niveles que define la figura.</p>` : ''}
+  <div id="exBox"><button class="btn ghost block" data-act="moreEx" data-id="${p.id}">${ic('grid')} Ver 4 ejemplos más</button></div>
+  <div><h3 style="margin-bottom:10px">Patrones relacionados</h3><div class="rel">${p.rel.map(r => `<button class="relc" data-act="detail" data-id="${r}">${glyph(r, 40)}<span>${P(r).name}</span>${ic('arrow')}</button>`).join('')}</div></div>`;
+}
+function showDetail(id, lesson) {
+  if (!canAccess(id)) { showPaywall(); return; }
+  const p = P(id); const sm = buildSample(p);
+  OV = { mode: 'detail', id, lesson };
+  pushRecent(id); save();
+  ov().innerHTML = `<div class="ov"><div class="ovtop"><button class="x" data-act="close" aria-label="Cerrar">${ic('x')}</button><span class="eyebrow">${lesson ? 'Lección' : 'Biblioteca'} · ${CAT[p.cat]}</span></div>${teachHTML(p, sm)}
+  <div class="row" style="gap:10px"><button class="btn ghost" data-act="another" data-id="${id}" style="flex:1">Otro ejemplo</button>${lesson ? `<button class="btn" data-act="startLesson" data-id="${id}" style="flex:1.4">Practicar ${ic('arrow')}</button>` : `<button class="btn" data-act="startPat" data-id="${id}" style="flex:1.4">Practicar este patrón</button>`}</div></div>`;
+  openOv(); ov().scrollTop = 0;
+}
+function moreEx(id) {
+  if (!canAccess(id)) { showPaywall(); return; }
+  const p = P(id); let h = '<div class="exgrid">';
+  for (let i = 0; i < 4; i++) { const sm = buildSample(p); h += `<div class="chartbox">${chart(sm, false, 190)}<span class="tag">${sm.tf}</span></div>`; }
+  document.getElementById('exBox').innerHTML = h + '</div>';
+}
+
+let SS = null;
+/* Las figuras neutrales no tienen sesgo, así que nunca se preguntan como Sube/Baja */
+function mkQ(pid, mode) { const p = P(pid); return { pid, mode: p.dir === 'neutral' ? 'pat' : (mode || 'pat'), sm: buildSample(p), opts: buildOptions(p), pick: null, ok: null }; }
+function startPractice() {
+  const pool = ORDER.filter(id => S.done[id] && canAccess(id)); if (!pool.length) { showDetail(ORDER[0], true); return; }
+  const base = pickPatterns(Math.min(5, pool.length), mastery, seenOf, pool.length >= 5 ? pool : null);
+  const pat = pool.length >= 5 ? base : shuffle(pool.map(id => P(id)));
+  SS = { kind: 'practice', qs: [0, 1, 2, 3, 4].map(i => mkQ(pat[i % pat.length].id, i % 2 ? 'dir' : 'pat')), i: 0, right: 0, xp: 0 };
+  showQ(); openOv();
+}
+function startPatternPractice(id) {
+  if (!canAccess(id)) { showPaywall(); return; }
+  SS = { kind: 'pattern', pid: id, qs: ['pat', 'pat', 'dir', 'pat', 'dir'].map(m => mkQ(id, m)), i: 0, right: 0, xp: 0 };
+  showQ(); openOv();
+}
+function startLesson(id) {
+  if (!canAccess(id)) { showPaywall(); return; }
+  const learned = ORDER.filter(x => S.done[x] && x !== id && canAccess(x));
+  const same = PATTERNS.filter(x => x.grp === P(id).grp && x.id !== id && canAccess(x.id) && !confOf(id).includes(x.id)).map(x => x.id);
+  const other = shuffle(learned.length ? learned : same)[0] || id;
+  SS = { kind: 'lesson', lid: id, qs: [mkQ(id, 'pat'), mkQ(other, 'pat'), mkQ(id, 'dir')], i: 0, right: 0, xp: 0 };
+  showQ(); openOv();
+}
+function progBar() {
+  return `<div class="prog">${SS.qs.map((q, i) => `<i class="${q.pick === null ? (i === SS.i ? 'on' : '') : (q.ok ? 'on' : 'bad')}"></i>`).join('')}</div><span class="mono">${SS.i + 1} / ${SS.qs.length}</span>`;
+}
+function showQ() {
+  const q = SS.qs[SS.i], done = q.pick !== null, p = P(q.pid), ok = q.ok, unsure = q.pick === '?', fig = p.grp === 'f';
+  const kindLbl = SS.kind === 'lesson' ? 'Lección' : SS.kind === 'pattern' ? 'Práctica' : 'Reto de hoy';
+  let ctrl;
+  if (q.mode === 'dir') {
+    const mkb = (d, lbl) => { let c = d === 'up' ? 'u' : 'd'; if (done) { if (p.dir === d) c += ' right'; else if (q.pick === d) c += ' wrong'; } return `<button class="dirb ${c}" data-act="pick" data-id="${d}" ${done ? 'disabled' : ''}>${ic(d)}${lbl}</button>`; };
+    ctrl = `<div class="dirs">${mkb('up', 'Sube')}${mkb('down', 'Baja')}</div>`;
+  } else {
+    ctrl = `<div class="opts">${q.opts.map((id, k) => { let cls = ''; if (done) { if (id === q.pid) cls = 'right'; else if (id === q.pick) cls = 'wrong'; } return `<button class="opt ${cls}" data-act="pick" data-id="${id}" ${done ? 'disabled' : ''}><span class="k">${'ABCD'[k]}</span>${P(id).name}</button>`; }).join('')}</div>`;
+  }
+  const last = SS.i === SS.qs.length - 1;
+  const title = q.mode === 'dir' ? (fig ? '¿La figura sugiere una subida o una bajada?' : '¿El patrón sugiere una subida o una bajada?') : (fig ? '¿Qué figura ves en la gráfica?' : '¿Qué patrón hay al final de la gráfica?');
+  const hint = q.mode === 'dir' ? 'Piensa en la señal que da el patrón, no en lo que pase después.' : (fig ? 'Mira la forma completa que dibuja el precio.' : 'Fíjate en las últimas velas y en la tendencia que las precede.');
+  const verdict = p.dir === 'neutral' ? 'no tiene sesgo propio: depende de hacia dónde rompa' : `sesgo ${p.dir === 'up' ? 'alcista' : 'bajista'}, ${p.dir === 'up' ? 'sugiere una subida' : 'sugiere una bajada'}`;
+  const head = !done ? `<div class="q">${title}</div><p class="muted" style="margin-top:-6px">${hint}</p>`
+    : `<div class="res ${ok ? 'ok' : 'no'}">${ok ? 'Acertaste' : unsure ? 'Sin problema' : (q.mode === 'dir' ? 'Era la otra dirección' : 'No era ese')}</div><p class="muted">Era ${p.name}: ${verdict}.</p>`;
+  const fol = q.sm.fol === null ? 'Aquí las velas nuevas rompieron hacia un lado, pero podrían haber ido al otro.' : q.sm.fol ? 'En esta simulación el precio siguió la señal.' : 'En esta simulación el precio fue contra la señal: ningún patrón funciona siempre.';
+  OV = { mode: 'sess' };
+  ov().innerHTML = `<div class="ov"><div class="ovtop"><button class="x" data-act="close" aria-label="Cerrar">${ic('x')}</button>${progBar()}</div>
+  <div class="row between"><span class="eyebrow" style="color:var(--accent-fg)">${kindLbl}</span><span class="pill mono" style="font-size:12px">${q.sm.tk} · ${q.sm.tf}</span> <span class="pill mono cash-pill" style="font-size:12px">${dinero(S.cash)}</span></div>
+  ${head}
+  <div class="chartbox">${chart(Object.assign({}, q.sm, { showHl: done }), done)}<span class="tag">Simulado</span></div>
+  ${done ? `<p>${p.text}</p><div class="key"><b>Conclusión clave</b>${p.takeaway}</div><div class="warn"><b>${ic('alert')} Cuándo falla</b>${p.fails}</div><details><summary>Qué buscar</summary><ul class="look">${p.look.map(l => `<li>${l}</li>`).join('')}</ul></details><p class="note">${fol} Las velas nuevas son una simulación, no una garantía.</p><button class="btn block" data-act="next">${last ? 'Finalizar' : 'Siguiente'}</button>` : `${ctrl}<button class="link" data-act="pick" data-id="?">No estoy seguro</button>`}</div>`;
+  ov().scrollTop = 0;
+}
+/* ---------- presupuesto, canon y ladron ---------- */
+const APUESTA = { 1: 2, 2: 4, 3: 8 };
+function dificultad(p, modo) {
+  const velas = Number(p && p.n) || 1;
+  const parecidos = Array.isArray(p && p.rel) ? p.rel.length : 0;
+  let nivel = 1 + (velas >= 3 ? 1 : 0) + (parecidos >= 2 ? 1 : 0);
+  if (modo === 'dir') nivel -= 1;
+  return Math.max(1, Math.min(3, nivel));
+}
+function dinero(v) { return '$' + Number(v).toFixed(2); }
+function playResult(ok, delta, dif) {
+  const quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const capa = document.createElement('div');
+  capa.className = 'fx' + (quieto ? ' quiet' : '');
+  if (ok) {
+    capa.innerHTML = '<div class="cannon"><i class="barrel"></i><i class="wheel"></i><i class="boom"></i></div>';
+    document.body.appendChild(capa);
+    const cuantos = 6 + dif * 3;
+    for (let i = 0; i < cuantos; i++) {
+      const b = document.createElement('span');
+      b.className = 'bill';
+      b.textContent = '💸';
+      b.style.left = (66 + Math.random() * 10) + 'px';
+      b.style.bottom = (106 + Math.random() * 12) + 'px';
+      b.style.setProperty('--dx', (120 + Math.random() * 240) + 'px');
+      b.style.setProperty('--dy', (-110 - Math.random() * 190) + 'px');
+      b.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+      b.style.animationDelay = (i * 45) + 'ms';
+      capa.appendChild(b);
+    }
+    const sube = document.createElement('span');
+    sube.className = 'billup';
+    sube.textContent = '+' + dinero(delta);
+    sube.style.left = '50%';
+    sube.style.top = '44%';
+    capa.appendChild(sube);
+  } else {
+    capa.innerHTML = '<div class="thief">🥷</div>'
+      + '<div class="cartel">ESTUDIA MÁS<br>O QUEMAS LA CUENTA</div>'
+      + '<div class="loss">' + dinero(delta) + '</div>';
+    document.body.appendChild(capa);
+  }
+  setTimeout(() => capa.remove(), 3200);
+}
+function pick(id) {
+  if (!SS || !canAccess(SS.qs[SS.i]?.pid)) { showPaywall(); return; }
+  const q = SS.qs[SS.i]; if (q.pick !== null) return;
+  q.pick = id; const unsure = id === '?';
+  const ok = !unsure && (q.mode === 'dir' ? id === P(q.pid).dir : id === q.pid); q.ok = ok;
+  touchDay();
+  S.answered++; if (ok) { S.correct++; SS.right++; S.run++; S.bestRun = Math.max(S.bestRun, S.run); if (q.mode === 'dir') S.dirOk++; } else S.run = 0;
+  const ptn = P(q.pid), dif = dificultad(ptn, q.mode), apuesta = APUESTA[dif];
+  const antesSaldo = S.cash;
+  S.cash = Math.max(0, Math.round((S.cash + (unsure ? 0 : (ok ? apuesta : -apuesta))) * 100) / 100);
+  const movido = Math.round((S.cash - antesSaldo) * 100) / 100;
+  const rec = S.pat[q.pid] || (S.pat[q.pid] = { seen: 0, ok: 0, hist: [] });
+  rec.seen++; if (ok) rec.ok++; rec.hist = rec.hist.concat([ok]).slice(-8);
+  pushRecent(q.pid);
+  const g = addXP(ok ? 20 : (unsure ? 2 : 5)); SS.xp += g;
+  save(); showQ();
+  if (!unsure) playResult(ok, movido, dif);
+}
+function finish() {
+  touchDay(); S.sessions++;
+  let bonus = 30, passed = true, newReto = false;
+  if (SS.kind === 'lesson') {
+    passed = SS.right >= 2;
+    if (passed && !S.done[SS.lid]) { S.done[SS.lid] = true; bonus += 20; }
+  }
+  if (SS.right === SS.qs.length) S.perfect++;
+  if (SS.kind === 'practice' && S.retoDay !== dayStr()) { S.retoDay = dayStr(); S.retos++; newReto = true; }
+  SS.xp += addXP(bonus); save();
+  const total = SS.qs.length;
+  const nxt = SS.kind === 'lesson' && passed && isPro() ? ORDER[curIdx()] : null;
+  OV = { mode: 'end' };
+  ov().innerHTML = `<div class="ov"><div class="ovtop"><button class="x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div>
+  <div class="eyebrow">${SS.kind === 'lesson' ? 'Lección ' + (passed ? 'superada' : 'por repetir') : SS.kind === 'pattern' ? 'Práctica de ' + P(SS.pid).name : 'Sesión terminada'}</div>
+  <div class="big">${SS.right} / ${total}</div>
+  <p class="muted">${passed ? (SS.kind === 'lesson' ? `${P(SS.lid).name} queda en tu ruta.` : 'Buen ritmo. Los fallos de hoy son los que más enseñan.') : 'Necesitas al menos 2 aciertos de 3. Repasa la lección y vuelve a intentarlo.'}</p>
+  <div class="card row between"><span class="row">${ic('bolt')} XP ganados</span><b class="mono">+${SS.xp}</b></div>
+  <div class="card row between"><span class="row">${ic('flame')} Racha</span><b class="mono">${S.streak} ${S.streak === 1 ? 'día' : 'días'}</b></div>
+  ${newReto ? `<div class="card row between"><span class="row">${ic('calendar')} Reto de hoy</span><b>Completado</b></div>` : ''}
+  <div class="stack" style="gap:10px">${nxt ? `<button class="btn block" data-act="lesson" data-id="${nxt}">Siguiente lección</button>` : ''}${SS.kind === 'lesson' && passed && !isPro() ? `<button class="btn block" data-act="pro">Desbloquear Velario Pro</button>` : ''}${SS.kind === 'lesson' && !passed ? `<button class="btn block" data-act="lesson" data-id="${SS.lid}">Repetir lección</button>` : ''}<button class="btn ${nxt || !passed ? 'ghost' : ''} block" data-act="practice">Otra sesión de práctica</button><button class="btn ghost block" data-act="close">Volver</button></div></div>`;
+  ov().scrollTop = 0;
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, id = el.dataset.id;
+  if (a === 'sub') { sub = el.dataset.v; render(); }
+  else if (a === 'filt') { filt = el.dataset.v; render(); }
+  else if (a === 'goLib') { sub = 'lib'; go('aprende'); }
+  else if (a === 'goPerfil') go('perfil');
+  else if (a === 'badges') showBadges(false);
+  else if (a === 'help') showBadges(true);
+  else if (a === 'detail') showDetail(id, false);
+  else if (a === 'lesson') showDetail(id, true);
+  else if (a === 'another') showDetail(id, OV && OV.lesson);
+  else if (a === 'startLesson') startLesson(id);
+  else if (a === 'startPat') startPatternPractice(id);
+  else if (a === 'purchase') requestPurchase(el.dataset.method || 'play');
+  else if (a === 'pro') showPaywall();
+  else if (a === 'restore') refreshBilling(true);
+  else if (a === 'manage') { const bridge = billingBridge(); if (bridge?.manage) Promise.resolve(bridge.manage()).catch(() => { billing.message = 'No se pudo abrir la gestión de suscripción.'; showPaywall(); }); }
+  else if (a === 'moreEx') moreEx(id);
+  else if (a === 'practice') startPractice();
+  else if (a === 'pick') pick(id);
+  else if (a === 'next' && SS && SS.qs[SS.i]?.pick !== null) { SS.i++; if (SS.i >= SS.qs.length) finish(); else showQ(); }
+  else if (a === 'close') closeOv();
+  else if (a === 'reset') { document.getElementById('rstBox').innerHTML = `<p style="margin-bottom:10px">Se borran tus lecciones, XP e insignias de este navegador.</p><div class="row" style="gap:10px"><button class="btn ghost" data-act="rstNo" style="flex:1">Cancelar</button><button class="btn" data-act="rstYes" style="flex:1">Borrar</button></div>`; }
+  else if (a === 'rstNo') render();
+  else if (a === 'rstYes') { S = fresh(); save(); heroSm = null; render(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'nm') { S.name = e.target.value.trim(); save(); }
+  if (e.target.id === 'libq') { libQ = e.target.value; const l = document.getElementById('libList'); if (l) l.innerHTML = libListHTML(); }
+});
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (['inicio', 'aprende', 'perfil'].includes(t) && t !== tab) { tab = t; render(); } });
+{ const t = location.hash.slice(1); if (['inicio', 'aprende', 'perfil'].includes(t)) tab = t; }
+render();
+window.addEventListener('velario:billing', event => applyBilling(event.detail));
+window.velarioBack = () => {
+  if (!ov().hidden) { closeOv(); return true; }
+  if (tab !== 'inicio') { go('inicio'); return true; }
+  return false;
+};
+window.addEventListener('focus', () => refreshBilling());
+document.addEventListener('keydown', event => {
+  if (ov().hidden) return;
+  if (event.key === 'Escape') { event.preventDefault(); closeOv(); return; }
+  if (event.key !== 'Tab') return;
+  const focusable = Array.from(ov().querySelectorAll('button:not(:disabled),a[href],input,summary')).filter(node => node.getClientRects().length);
+  if (!focusable.length) return;
+  if (event.shiftKey && document.activeElement === focusable[0]) { event.preventDefault(); focusable.at(-1).focus(); }
+  else if (!event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); focusable[0].focus(); }
+});
+refreshBilling();
+
+</script>
+
+</body></html>

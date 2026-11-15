@@ -1,0 +1,22 @@
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { execFileSync } = require('child_process');
+const DIR = path.join(process.env.APPDATA, 'velario');
+const BIN = path.join(DIR, 'purchase-account.bin');
+const TMP = require('os').tmpdir();
+const state = JSON.parse(fs.readFileSync(path.join(DIR, 'Local State'), 'utf8'));
+const raw = Buffer.from(state.os_crypt.encrypted_key, 'base64').slice(5);
+fs.writeFileSync(path.join(TMP, 'k.bin'), raw);
+execFileSync('powershell', ['-NoProfile', '-Command', `Add-Type -AssemblyName System.Security; $b=[IO.File]::ReadAllBytes('${path.join(TMP, 'k.bin')}'); $d=[Security.Cryptography.ProtectedData]::Unprotect($b,$null,'CurrentUser'); [IO.File]::WriteAllBytes('${path.join(TMP, 'k2.bin')}',$d)`]);
+const key = fs.readFileSync(path.join(TMP, 'k2.bin'));
+const data = fs.readFileSync(BIN);
+const d = crypto.createDecipheriv('aes-256-gcm', key, data.slice(3, 15));
+d.setAuthTag(data.slice(data.length - 16));
+const acc = JSON.parse(Buffer.concat([d.update(data.slice(15, data.length - 16)), d.final()]).toString('utf8'));
+console.log('cuenta que ve la app:', acc.accountId, '|', acc.apiBaseUrl, '| archivo:', fs.statSync(BIN).mtime.toISOString());
+(async () => {
+  const r = await fetch(acc.apiBaseUrl + '/api/entitlement', { headers: { Authorization: 'Bearer ' + acc.token } });
+  const j = await r.json();
+  console.log('servidor para esa cuenta:', r.status, 'active=' + j.active, 'expira=' + j.expiresAt);
+})();
