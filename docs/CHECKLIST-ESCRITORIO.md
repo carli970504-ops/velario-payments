@@ -31,8 +31,16 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
       mostrará "editor desconocido" y SmartScreen bloqueará la primera ejecución.
       Variables: `CSC_LINK` (ruta o base64 del .pfx) y `CSC_KEY_PASSWORD`.
 - [ ] Verificar firma: `signtool verify /pa /v dist\Velario-1.2.0-setup.exe`.
+- [x] Instalación probada con la variante silenciosa (`dist-silencio/Velario-1.2.0-silencioso-setup.exe`):
+      copia archivos, `Velario.exe` declara versión 1.2.0, crea entrada de desinstalación y
+      la app arranca (`[arranque] Velario 1.2.0 · interfaz lista`).
+- [!] **Desinstalación**: el desinstalador devuelve 0 pero deja archivos, accesos y
+      entradas de registro, y el proceso `Un_A.exe` queda colgado. Requiere revisión
+      interactiva con UAC; además quedó una entrada duplicada "Velario 1.1.0" de
+      instalaciones anteriores.
+- [x] Los datos del usuario (`%APPDATA%\velario`: progreso y `purchase-account.bin`)
+      sobreviven a los intentos de desinstalación.
 - [ ] Probar instalación, desinstalación y reinstalación en Windows 10 y 11 limpios.
-- [ ] Comprobar que desinstalar **no** borra `%APPDATA%\velario` (progreso y cuenta).
 - [ ] Publicar hash SHA-256 del instalador junto a la descarga.
 
 ## 3. Pagos (modo test verificado; live sin probar)
