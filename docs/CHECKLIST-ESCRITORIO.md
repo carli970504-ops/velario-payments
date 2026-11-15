@@ -24,7 +24,9 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
 - [x] Configuración NSIS con desinstalador: `work-app/electron-builder.yml`
       (`oneClick:false`, elegir carpeta, accesos directos, `deleteAppDataOnUninstall:false`
       para no borrar progreso ni cuenta de compras).
-- [ ] Compilar: `cd work-app && npm install && npm run dist` → `dist/Velario-1.2.0-setup.exe`.
+- [x] Compilado: `work-app/dist/Velario-1.2.0-setup.exe` (102 MB, NSIS x64) con
+      `npm install && npm run dist`.
+- [x] Icono de aplicación incluido en el ejecutable y en el instalador.
 - [!] **Firma de código**: hace falta un certificado OV/EV en `.pfx`. Sin él Windows
       mostrará "editor desconocido" y SmartScreen bloqueará la primera ejecución.
       Variables: `CSC_LINK` (ruta o base64 del .pfx) y `CSC_KEY_PASSWORD`.
@@ -41,9 +43,15 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
 - [x] Comprar saldo ya **no** rompe el estado de Pro (corregido; prueba 27/27).
 - [x] Webhooks: el mismo evento no se procesa dos veces.
 - [x] PayPal: sin credenciales → no se anuncia y el servidor responde 503.
-- [!] **Despliegue**: `origin/main` está en `7a08c04`; la rama local `main-deploy` va
-      **10 commits por delante**. Render sigue sirviendo la versión vieja: con token válido,
-      `/api/credits/checkout` y `/api/rewards/daily` devuelven **404**. Falta el push.
+- [x] **Despliegue**: subido a `origin/main` y desplegado por Render en 33 s.
+      `/api/credits/checkout` y `/api/rewards/daily` ya existen; la recompensa diaria
+      acredita una vez y rechaza la segunda el mismo día.
+- [x] Checkout real de Stripe en modo prueba desde producción (URL `cs_test_`).
+- [x] Suscripción de prueba cobrada con tarjeta 4242: Pro se activa en producción,
+      restaurar mantiene el acceso, con Pro activo se rechaza otro cobro (409) y al
+      cancelar deja de haber Pro.
+- [!] Acreditar saldo tras un pago real: el checkout alojado no se puede completar desde
+      un navegador automatizado (hCaptcha invisible). Requiere un pago manual con 4242.
 - [ ] Pasar a live: `PAYMENTS_MODE=live`, `STRIPE_SECRET_KEY=sk_live_…`,
       `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` (2 USD/semana) y `PUBLIC_BASE_URL` HTTPS.
 - [ ] Registrar el webhook en Stripe (`/webhooks/stripe`) y probar un cobro real de 2 USD

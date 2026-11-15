@@ -8,3 +8,8 @@ ACCOUNT_SECRET-para-render.txt
 .paypal-creds
 paypal-env.txt
 work-app/desktop/*.backup-antes-presupuesto
+
+# artefactos de compilación
+work-app/dist/
+work-app/node_modules/
+work-app/dist-silencio/
