@@ -32,7 +32,7 @@ Por tanto hay dos caminos, y hay que elegir uno antes de invertir en publicar:
 
 ## 3. Bloqueos que dependen de ti
 
-- [ ] **PayPal**: crear app en developer.paypal.com y aportar client id + secret. El resto lo hace `tools/paypal_setup.mjs`.
+- [x] **PayPal (opcional)**: decidido dejarlo fuera por ahora, no bloquea nada. La app cobra con tarjeta, Apple Pay, Google Pay y Link. Si algun dia se quiere anadir, crear la app en developer.paypal.com, dejar client id + secret en `.paypal-creds` y ejecutar `node tools/paypal_setup.mjs` (ya reutiliza plan y webhook, no duplica).
 - [ ] **Pasar a cobro real**: `PAYMENTS_MODE=live` con claves live (`sk_live_`), precio live y webhook live. Hoy todo es de pruebas.
 - [ ] **Cuenta de desarrollador Apple** (99 USD/al año) y **Google Play** (25 USD unica vez).
 - [ ] **Certificado de firma de codigo** para Windows (si es camino A).
