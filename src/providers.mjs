@@ -118,7 +118,14 @@ class StripeProvider {
     if (Boolean(session.livemode) !== (this.config.mode === 'live')) throw new PaymentError('Entorno de compra incorrecto.', 403);
     if (session.payment_status !== 'paid') return { paid: false, mode, credits: 0, status: session.status || 'pending' };
     if (Number(session.amount_total) !== CREDIT.amount || session.currency !== CREDIT.currency) throw new PaymentError('Importe de la compra inesperado.', 400);
+    // La marca vive en la propia sesión de Stripe: aunque se pierda la base local (disco
+    // efímero), un pago ya abonado no puede volver a acreditarse.
+    if (session.metadata?.credited_at) return { paid: true, mode, credits: 0, status: 'paid', already: true };
     return { paid: true, mode, credits: CREDIT.credits, status: 'paid' };
+  }
+  async markCredited(reference) {
+    try { await this.call(`checkout/sessions/${encodeURIComponent(reference)}`, 'POST', { 'metadata[credited_at]': String(Date.now()) }); }
+    catch { /* el registro local sigue protegiendo mientras el proceso viva */ }
   }
   async inspect(reference, account, kind, row = {}) {
     await this.validatePrice();

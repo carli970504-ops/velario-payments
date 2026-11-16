@@ -20,6 +20,7 @@ function mockProviders() {
       if(!value.paid) return {paid:false,mode:value.mode,credits:0,status:'open'};
       if(value.amount!==100) throw new PaymentError('Importe de la compra inesperado.',400);
       return {paid:true,mode:value.mode,credits:1000,status:'paid'}; },
+    async markCredited() { this.marks=(this.marks||0)+1; },
     async inspect() { checked++; return {active:false,expiresAt:null,status:'pending'}; },
     async verifyWebhook() { throw new PaymentError('Firma inválida',400); },
     async manage() {return {url:'https://billing.stripe.com/test'};}
@@ -212,6 +213,8 @@ test('saldo: se acredita una vez, en el modo comprado y solo a su dueño',async 
   const again=await f.request('/api/credits/claim',session.token,{session:created.reference});
   assert.equal(again.body.credits,0); assert.equal(again.body.alreadyCredited,true);
   assert.equal(f.store.creditFor(created.reference).mode,'etf');
+  // El pago queda marcado en Stripe, no solo en la base local.
+  assert.equal(f.providers.stripe.marks,1);
 });
 
 test('saldo: importe manipulado o proveedor sin configurar no acreditan nada',async t=>{
@@ -279,6 +282,19 @@ test('saldo: una referencia que Stripe no conoce es compra inválida, no fallo d
   globalThis.fetch=async()=>({ok:false,status:404,json:async()=>({error:{type:'invalid_request_error',code:'resource_missing',message:'No such checkout.session'}})});
   t.after(()=>{globalThis.fetch=original;});
   await assert.rejects(()=>stripe.claimCredit('cs_test_inventado','cuenta'),error=>error instanceof PaymentError&&error.status===400);
+});
+
+test('saldo: una compra marcada en Stripe no se abona otra vez aunque se pierda la base',async t=>{
+  const config=readConfig({STRIPE_SECRET_KEY:'sk_test_x',STRIPE_WEBHOOK_SECRET:'whsec_x',
+    STRIPE_PRICE_ID:'price_x',PUBLIC_BASE_URL:'https://velario.test'});
+  const stripe=createProviders(config).stripe;
+  const original=globalThis.fetch;
+  globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({id:'cs_test_pagada',client_reference_id:'cuenta',mode:'payment',
+    payment_status:'paid',status:'complete',amount_total:100,currency:'usd',livemode:false,
+    metadata:{account_id:'cuenta',pack:'credit1000',mode:'etf',credited_at:'1763000000000'}})});
+  t.after(()=>{globalThis.fetch=original;});
+  const value=await stripe.claimCredit('cs_test_pagada','cuenta');
+  assert.equal(value.paid,true); assert.equal(value.already,true); assert.equal(value.credits,0);
 });
 
 test('el checkout caduca con el margen que exige Stripe',()=>{

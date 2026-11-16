@@ -206,7 +206,8 @@ export function createApp({ config, store, providers, log = console, accounts = 
           const value=await providers.stripe.claimCredit(input.session,account);
           if(!value.paid) return {paid:false,mode:value.mode,credits:0,status:value.status};
           // El alta es única: la clave primaria de la sesion impide acreditar dos veces.
-          const first=store.creditClaim(input.session,account,value.mode,value.credits);
+          const first=!value.already && store.creditClaim(input.session,account,value.mode,value.credits);
+          if(first && typeof providers.stripe.markCredited==='function') await providers.stripe.markCredited(input.session);
           return {paid:true,mode:value.mode,credits:first?value.credits:0,alreadyCredited:!first};
         }));
       }
