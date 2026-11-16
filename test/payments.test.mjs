@@ -9,7 +9,7 @@ import { createProviders, PaymentError, verifyStripeSignature, stripeEntitlement
 const expiry=()=>new Date(Date.now()+86400000).toISOString();
 function mockProviders() {
   let checked=0, credits=0;
-  const creditSessions=new Map();
+  const creditSessions=new Map(), days=new Map();
   const provider={ configured:true, creates:0, creditSessions,
     async create(account) { this.creates++; return { reference:'cs_test_'+this.creates, kind:'checkout',url:'https://checkout.stripe.com/test/'+this.creates }; },
     async createCredit(account,mode) { credits++; const reference='cs_credit_'+credits;
@@ -21,14 +21,16 @@ function mockProviders() {
       if(value.amount!==100) throw new PaymentError('Importe de la compra inesperado.',400);
       return {paid:true,mode:value.mode,credits:1000,status:'paid'}; },
     async markCredited() { this.marks=(this.marks||0)+1; },
+    async dailyReward(account,day) { const k=account+':'+day; if(days.has(k)) return {claimed:false,day};
+      days.set(k,true); return {claimed:true,day}; },
     async inspect() { checked++; return {active:false,expiresAt:null,status:'pending'}; },
     async verifyWebhook() { throw new PaymentError('Firma inválida',400); },
     async manage() {return {url:'https://billing.stripe.com/test'};}
   };
   return {stripe:{...provider},paypal:{...provider},play:{...provider},get checked(){return checked;}};
 }
-async function fixture(t, providers=mockProviders()) {
-  const store=new Store(':memory:'), config=readConfig({});
+async function fixture(t, providers=mockProviders(), config=readConfig({})) {
+  const store=new Store(':memory:');
   const app=createApp({config,store,providers,log:{error(){}}});
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   t.after(async()=>{await new Promise(resolve=>app.server.close(resolve));store.close();});
@@ -295,6 +297,19 @@ test('saldo: una compra marcada en Stripe no se abona otra vez aunque se pierda 
   t.after(()=>{globalThis.fetch=original;});
   const value=await stripe.claimCredit('cs_test_pagada','cuenta');
   assert.equal(value.paid,true); assert.equal(value.already,true); assert.equal(value.credits,0);
+});
+
+test('reto diario: la marca en Stripe impide repetirlo tras perder la base',async t=>{
+  const providers=mockProviders(), config=readConfig({});
+  const uno=await fixture(t,providers,config);
+  const session=(await uno.request('/api/session',null,{})).body;
+  const primero=(await uno.request('/api/rewards/daily',session.token,{mode:'etf',amount:3})).body;
+  assert.equal(primero.credited,3);
+  // Simula un despliegue: la tabla de recompensas desaparece con la base.
+  uno.store.db.prepare('DELETE FROM rewards').run();
+  const segundo=(await uno.request('/api/rewards/daily',session.token,{mode:'etf',amount:3})).body;
+  assert.equal(segundo.credited,0);
+  assert.equal(segundo.alreadyClaimed,true);
 });
 
 test('el checkout caduca con el margen que exige Stripe',()=>{

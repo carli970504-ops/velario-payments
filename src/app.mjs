@@ -181,8 +181,14 @@ export function createApp({ config, store, providers, log = console, accounts = 
         // El dia lo decide el servidor: cambiar la hora del equipo no abre otra ronda.
         const day=new Date().toISOString().slice(0,10);
         return json(res,200,await locked(account,async()=>{
-          const created=store.rewardClaim(account,day,input.mode,amount);
           const row=store.rewardFor(account,day);
+          let allowed=!row;
+          // Tras un despliegue la base vuelve vacía; la marca en Stripe impide repetir el día.
+          if(allowed && typeof providers.stripe?.dailyReward==='function') {
+            try { allowed=(await providers.stripe.dailyReward(account,day)).claimed; }
+            catch { /* si Stripe no responde, decide el registro local */ }
+          }
+          const created=allowed?store.rewardClaim(account,day,input.mode,amount):false;
           return {day,credited:created?amount:0,alreadyClaimed:!created,mode:row?.mode || input.mode};
         }));
       }

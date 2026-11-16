@@ -127,6 +127,18 @@ class StripeProvider {
     try { await this.call(`checkout/sessions/${encodeURIComponent(reference)}`, 'POST', { 'metadata[credited_at]': String(Date.now()) }); }
     catch { /* el registro local sigue protegiendo mientras el proceso viva */ }
   }
+  // La recompensa diaria también se marca en Stripe: la base local se borra en cada
+  // despliegue y el mismo día se podía volver a cobrar. La clave de idempotencia evita
+  // crear varios clientes para la misma cuenta.
+  async dailyReward(account, day) {
+    if (!this.settings.key) unavailable();
+    const created = await this.call('customers', 'POST', { 'metadata[account_id]': account }, `reward-${account}`);
+    // La respuesta idempotente repite el cliente tal y como se creó, así que se relee.
+    const customer = await this.call(`customers/${encodeURIComponent(created.id)}`);
+    if (customer.metadata?.reward_day === day) return { claimed: false, day };
+    await this.call(`customers/${encodeURIComponent(customer.id)}`, 'POST', { 'metadata[reward_day]': day, 'metadata[account_id]': account });
+    return { claimed: true, day };
+  }
   async inspect(reference, account, kind, row = {}) {
     await this.validatePrice();
     let sub;
