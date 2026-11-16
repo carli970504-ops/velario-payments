@@ -67,8 +67,13 @@ es la unica copia de nada importante.
 Lo mismo vale para el saldo: al acreditar una compra se escribe `metadata.credited_at` en la propia
 sesion de Stripe, y cualquier reclamo posterior (aunque Render haya borrado SQLite en un despliegue)
 responde `credits:0, alreadyCredited:true`. Antes de esa marca, el mismo pago se acredito dos veces
-tras un despliegue. Pendiente real: la recompensa diaria sigue viviendo solo en la base, asi que un
-despliegue permite volver a cobrarla; se arregla con disco persistente o base gestionada.
+tras un despliegue.
+
+La recompensa diaria usa el mismo criterio: se crea (una sola vez por cuenta, con clave de
+idempotencia) un cliente de Stripe con `metadata.account_id` y se marca ahi `metadata.reward_day`.
+Tras un despliegue la base vuelve vacia, pero el reto del dia responde `credited:0, alreadyClaimed:true`.
+El saldo del jugador vive en la app (no en el servidor), asi que estos marcadores solo protegen
+contra abonos repetidos, no son la copia principal de nada.
 
 Ojo: los tokens emitidos antes de este cambio son aleatorios y no se pueden reconstruir. Un cliente
 antiguo tiene que abrir la app y empezar de cero.

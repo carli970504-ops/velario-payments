@@ -79,8 +79,11 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
       Prueba real: pago de 1,00 US$ → 1er reclamo 1000 créditos, Stripe queda marcado,
       2º reclamo `credits:0, alreadyCredited:true`; una sesión ya marcada se rechaza aunque la
       base esté vacía.
-- [!] La **recompensa diaria** sigue guardada solo en SQLite: cada despliegue permite volver a
-      cobrarla hasta tener disco persistente o base gestionada.
+- [x] **Recompensa diaria durable**: el día se marca en `metadata.reward_day` del cliente de
+      Stripe de la cuenta (creado una vez por cuenta con clave de idempotencia). Tras un
+      despliegue, el mismo reto responde `credited:0, alreadyClaimed:true`.
+- [ ] Disco persistente o base gestionada: ya no hace falta para el saldo ni el reto, solo
+      acelera y evita repoblar caché tras cada despliegue.
 - [ ] Convertir ese pago en uno con tarjeta propia (fuera de modo prueba).
 - [ ] Pasar a live: `PAYMENTS_MODE=live`, `STRIPE_SECRET_KEY=sk_live_…`,
       `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` (2 USD/semana) y `PUBLIC_BASE_URL` HTTPS.
