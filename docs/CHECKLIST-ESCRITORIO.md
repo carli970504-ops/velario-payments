@@ -34,14 +34,23 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
 - [x] Instalación probada con la variante silenciosa (`dist-silencio/Velario-1.2.0-silencioso-setup.exe`):
       copia archivos, `Velario.exe` declara versión 1.2.0, crea entrada de desinstalación y
       la app arranca (`[arranque] Velario 1.2.0 · interfaz lista`).
-- [!] **Desinstalación**: el desinstalador devuelve 0 pero deja archivos, accesos y
-      entradas de registro, y el proceso `Un_A.exe` queda colgado. Requiere revisión
-      interactiva con UAC; además quedó una entrada duplicada "Velario 1.1.0" de
-      instalaciones anteriores.
-- [x] Los datos del usuario (`%APPDATA%\velario`: progreso y `purchase-account.bin`)
-      sobreviven a los intentos de desinstalación.
+- [x] **Desinstalación** verificada: sin ninguna instancia abierta, `Uninstall Velario.exe /S`
+      vacía la carpeta de programa, borra los accesos directos y la entrada de registro
+      "Velario 1.2.0". Con la app abierta el desinstalador silencioso espera en segundo
+      plano (no borra nada hasta cerrarla), por eso hay que cerrar Velario primero.
+- [x] Los datos del usuario (`%APPDATA%\velario`: progreso, `purchase-account.bin` y su
+      copia) sobreviven a la desinstalación.
+- [x] Reinstalación verificada tras desinstalar: `INSTALL_EXIT=0`, 21 archivos,
+      `FileVersion 1.2.0`, entrada de registro recreada y la app arranca
+      (`[arranque] Velario 1.2.0 · Electron 39.8.10`, `interfaz lista`).
+- [x] Entrada de registro huérfana "Velario 1.1.0" eliminada (apuntaba a un
+      desinstalador que ya no existía); queda solo "Velario 1.2.0".
 - [ ] Probar instalación, desinstalación y reinstalación en Windows 10 y 11 limpios.
-- [ ] Publicar hash SHA-256 del instalador junto a la descarga.
+- [x] Hash SHA-256 calculado para publicar junto a la descarga:
+      `Velario-1.2.0-setup.exe` → `980372da68a6ae3687b6191bdf15c80161565bb15eeed9de188cc024109c6a02`
+      `Velario-1.2.0-silencioso-setup.exe` → `384bb063f310ef5dfd770b70dc3afc18cf31fbf441507a4a6b0ac5e67a09843c`
+- [x] Comprobar el hash tras descargar: `certutil -hashfile Velario-1.2.0-setup.exe SHA256`.
+- [ ] Publicar el hash en la página de descarga.
 
 ## 3. Pagos (modo test verificado; live sin probar)
 
@@ -58,8 +67,11 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
 - [x] Suscripción de prueba cobrada con tarjeta 4242: Pro se activa en producción,
       restaurar mantiene el acceso, con Pro activo se rechaza otro cobro (409) y al
       cancelar deja de haber Pro.
-- [!] Acreditar saldo tras un pago real: el checkout alojado no se puede completar desde
-      un navegador automatizado (hCaptcha invisible). Requiere un pago manual con 4242.
+- [x] **Saldo pagado verificado en producción**: pago de 1,00 US$ con 4242 en el checkout
+      alojado → `status=complete, payment_status=paid` en Stripe; `POST /api/credits/claim`
+      devuelve `credits:1000, alreadyCredited:false`, la segunda llamada `credits:0`
+      (idempotente) y otra cuenta recibe 403. Comprar saldo deja Pro en `inactive`.
+- [ ] Convertir ese pago en uno con tarjeta propia (fuera de modo prueba).
 - [ ] Pasar a live: `PAYMENTS_MODE=live`, `STRIPE_SECRET_KEY=sk_live_…`,
       `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` (2 USD/semana) y `PUBLIC_BASE_URL` HTTPS.
 - [ ] Registrar el webhook en Stripe (`/webhooks/stripe`) y probar un cobro real de 2 USD
