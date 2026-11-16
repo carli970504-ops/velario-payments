@@ -6,6 +6,8 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
 ## 1. Aplicación
 
 - [x] Arranque limpio verificado: ventana, interfaz renderizada, consola sin errores
+      (`node tools/qa/mock-gateway.mjs` en una terminal y `node tools/qa/e2e.mjs <ruta de Velario.exe>`
+      en otra → 17/17).
       (`node tools/qa/startup.mjs` → 15/15).
 - [x] Instancia única: una segunda apertura enfoca la ventana existente.
 - [x] Recuperación tras 0x80000003: reinicio automático sin GPU y, si repite, pantalla de

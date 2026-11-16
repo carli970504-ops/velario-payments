@@ -3,7 +3,7 @@
 //
 // Uso: node tools/qa/e2e.mjs [ruta/Velario.exe]
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -98,10 +98,21 @@ async function stopApp() {
   try { ws?.close(); } catch { /* nada */ }
   ws = null;
   if (child) {
+    const pid = child.pid;
     try { child.kill(); } catch { /* nada */ }
+    // En Windows child.kill deja vivos los procesos de Electron y el bloqueo de
+    // instancia unica impide relanzar; se mata el arbol entero.
+    if (process.platform === 'win32' && pid) {
+      try { spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* nada */ }
+    }
     child = null;
   }
-  await new Promise(r => setTimeout(r, 1200));
+  // Espera a que el puerto de depuracion se cierre, senal de que la app murio.
+  for (let i = 0; i < 40; i++) {
+    try { await fetch('http://127.0.0.1:' + PORT + '/json/version'); } catch { break; }
+    await sleep(250);
+  }
+  await new Promise(r => setTimeout(r, 800));
 }
 
 try {
@@ -163,7 +174,8 @@ try {
   ok('reto: el modo ETF se acepta en el proceso principal', retoJson.error === undefined && typeof retoJson.credited === 'number', reto);
 
   // ---- Idempotencia de webhooks y de checkout ----
-  const wh = JSON.stringify({ id: 'evt_qa_1', reference: referencia });
+  // Identificador distinto en cada ejecución: el servidor simulado recuerda los eventos ya vistos.
+  const wh = JSON.stringify({ id: 'evt_qa_' + Date.now(), reference: referencia });
   const first = await (await fetch(API + '/webhooks/stripe', { method: 'POST', body: wh })).json();
   const second = await (await fetch(API + '/webhooks/stripe', { method: 'POST', body: wh })).json();
   ok('webhooks: el mismo evento se procesa una sola vez', first.duplicate === false && second.duplicate === true, JSON.stringify(second));
