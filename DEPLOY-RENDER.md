@@ -64,6 +64,12 @@ preguntando a Stripe por `metadata.account_id` (`StripeProvider.findByAccount`).
 La base local queda como cache: acelera las consultas y guarda los checkouts pendientes, pero ya no
 es la unica copia de nada importante.
 
+Lo mismo vale para el saldo: al acreditar una compra se escribe `metadata.credited_at` en la propia
+sesion de Stripe, y cualquier reclamo posterior (aunque Render haya borrado SQLite en un despliegue)
+responde `credits:0, alreadyCredited:true`. Antes de esa marca, el mismo pago se acredito dos veces
+tras un despliegue. Pendiente real: la recompensa diaria sigue viviendo solo en la base, asi que un
+despliegue permite volver a cobrarla; se arregla con disco persistente o base gestionada.
+
 Ojo: los tokens emitidos antes de este cambio son aleatorios y no se pueden reconstruir. Un cliente
 antiguo tiene que abrir la app y empezar de cero.
 

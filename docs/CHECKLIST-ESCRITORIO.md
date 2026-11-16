@@ -71,6 +71,16 @@ Estado a 15/11/2026, versión **1.2.0** (commit `e6ce82e`). `[x]` verificado con
       alojado → `status=complete, payment_status=paid` en Stripe; `POST /api/credits/claim`
       devuelve `credits:1000, alreadyCredited:false`, la segunda llamada `credits:0`
       (idempotente) y otra cuenta recibe 403. Comprar saldo deja Pro en `inactive`.
+- [x] Errores del saldo con el significado correcto: referencia inexistente → 400
+      "Compra inválida" (antes 502), compra de otra cuenta → 403, sesión sin pagar →
+      `paid:false`, webhook sin firma → 400. Verificado contra producción.
+- [x] **Doble abono corregido y verificado**: el despliegue borra SQLite, y el mismo pago se
+      abonó dos veces. Ahora el abono se marca en `metadata.credited_at` de la sesión de Stripe.
+      Prueba real: pago de 1,00 US$ → 1er reclamo 1000 créditos, Stripe queda marcado,
+      2º reclamo `credits:0, alreadyCredited:true`; una sesión ya marcada se rechaza aunque la
+      base esté vacía.
+- [!] La **recompensa diaria** sigue guardada solo en SQLite: cada despliegue permite volver a
+      cobrarla hasta tener disco persistente o base gestionada.
 - [ ] Convertir ese pago en uno con tarjeta propia (fuera de modo prueba).
 - [ ] Pasar a live: `PAYMENTS_MODE=live`, `STRIPE_SECRET_KEY=sk_live_…`,
       `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` (2 USD/semana) y `PUBLIC_BASE_URL` HTTPS.
