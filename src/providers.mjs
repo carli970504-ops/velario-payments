@@ -103,7 +103,14 @@ class StripeProvider {
   // Solo lee y valida; el alta del saldo la decide la app con su registro de compras.
   async claimCredit(reference, account) {
     if (!this.settings.key || !this.config.publicBaseUrl) unavailable();
-    const session = await this.call(`checkout/sessions/${encodeURIComponent(reference)}`);
+    // Una referencia que Stripe no conoce viene del cliente, así que es 400 y no un fallo
+    // del proveedor (502): el reintento del cliente nunca lo arreglaría.
+    let session;
+    try { session = await this.call(`checkout/sessions/${encodeURIComponent(reference)}`); }
+    catch (error) {
+      if (error?.providerStatus === 404) throw new PaymentError('Compra inválida.', 400);
+      throw error;
+    }
     if (session.client_reference_id !== account || session.metadata?.account_id !== account) throw new PaymentError('La compra no corresponde a esta cuenta.', 403);
     if (session.mode !== 'payment' || session.metadata?.pack !== 'credit1000') throw new PaymentError('Esa compra no es saldo.', 400);
     const mode = session.metadata?.mode;

@@ -271,6 +271,16 @@ test('comprar saldo no altera ni regala el estado de Pro',async t=>{
   assert.equal(managePro.status,200);
 });
 
+test('saldo: una referencia que Stripe no conoce es compra inválida, no fallo del proveedor',async t=>{
+  const config=readConfig({STRIPE_SECRET_KEY:'sk_test_x',STRIPE_WEBHOOK_SECRET:'whsec_x',
+    STRIPE_PRICE_ID:'price_x',PUBLIC_BASE_URL:'https://velario.test'});
+  const stripe=createProviders(config).stripe;
+  const original=globalThis.fetch;
+  globalThis.fetch=async()=>({ok:false,status:404,json:async()=>({error:{type:'invalid_request_error',code:'resource_missing',message:'No such checkout.session'}})});
+  t.after(()=>{globalThis.fetch=original;});
+  await assert.rejects(()=>stripe.claimCredit('cs_test_inventado','cuenta'),error=>error instanceof PaymentError&&error.status===400);
+});
+
 test('el checkout caduca con el margen que exige Stripe',()=>{
   const casos=[0,1_799_999,Date.now(),Date.now()+1_234_567,Date.now()+29*60_000];
   for(const now of casos){
